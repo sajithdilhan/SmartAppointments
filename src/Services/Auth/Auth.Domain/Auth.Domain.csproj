@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\SmartAppointments.BuildingBlocks\SmartAppointments.BuildingBlocks.csproj" />
+  </ItemGroup>
+
 </Project>
