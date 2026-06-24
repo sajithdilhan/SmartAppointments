@@ -1,9 +1,10 @@
-﻿using System.Net;
+﻿using SmartAppointments.BuildingBlocks.Models;
+using System.Net;
 using System.Text.Json;
 
 namespace Auth.Api.Middlewares;
 
-public class ExceptionMiddleware
+public sealed class ExceptionMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionMiddleware> _logger;
@@ -48,12 +49,7 @@ public class ExceptionMiddleware
             _ => "An unexpected error occurred! Please try again later."
         };
 
-        var problem = new
-        {
-            Status = (int)statusCode,
-            Detail = message,
-            Instance = context.Request.Path
-        };
+        var problem = new ApiProblemDetails((int)statusCode, message);
 
         context.Response.StatusCode = problem.Status;
         context.Response.ContentType = "application/problem+json";

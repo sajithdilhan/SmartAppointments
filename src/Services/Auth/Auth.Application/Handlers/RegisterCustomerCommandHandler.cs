@@ -5,6 +5,7 @@ using Auth.Domain.Entities;
 using Auth.Domain.ValueObjects;
 using FluentValidation;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using SmartAppointments.BuildingBlocks.Models;
 
 namespace Auth.Application.Handlers;
@@ -12,7 +13,8 @@ namespace Auth.Application.Handlers;
 public sealed class RegisterCustomerCommandHandler(
     IUserRepository userRepository,
     IPasswordHasher passwordHasher,
-    IValidator<RegisterCustomerCommand> validator) : IRequestHandler<RegisterCustomerCommand, Result<RegisterCustomerResponse>>
+    IValidator<RegisterCustomerCommand> validator,
+    ILogger<RegisterCustomerCommandHandler> logger) : IRequestHandler<RegisterCustomerCommand, Result<RegisterCustomerResponse>>
 {
     public async Task<Result<RegisterCustomerResponse>> Handle(RegisterCustomerCommand request, CancellationToken cancellationToken)
     {
@@ -20,6 +22,7 @@ public sealed class RegisterCustomerCommandHandler(
         if (!validationResult.IsValid)
         {
             var validationErrors = string.Join(",", validationResult.Errors.Select(e => e.ErrorMessage).ToList());
+            logger.LogWarning("Invalid request data for registering customer: {ValidationErrors}", validationErrors);
             return Result<RegisterCustomerResponse>.Failure(new Error(400, $"Invalid request data. Errors: {validationErrors}"));
         }
 
@@ -29,6 +32,7 @@ public sealed class RegisterCustomerCommandHandler(
 
         if (existingUser is not null)
         {
+            logger.LogWarning("Attempt to register existing customer with email: {Email}", request.Email);
             return Result<RegisterCustomerResponse>.Failure(new Error(400, "Email is already registered."));
         }
 
@@ -42,10 +46,11 @@ public sealed class RegisterCustomerCommandHandler(
             passwordHash);
 
         await userRepository.CreateCustomer(user, cancellationToken);
+        logger.LogInformation("Successfully registered new customer with email: {Email}", request.Email);
 
         return Result<RegisterCustomerResponse>.Success(new RegisterCustomerResponse(
             user.Id,
             user.Email.Value,
-            nameof(user.Role)));
+            user.Role.ToString()));
     }
 }

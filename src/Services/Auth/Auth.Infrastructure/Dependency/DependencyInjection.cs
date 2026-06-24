@@ -1,6 +1,7 @@
 ﻿using Auth.Application.Abstractions;
-using Auth.Infrastructure.Repositories;
+using Auth.Infrastructure.Persistence;
 using Auth.Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,6 +14,10 @@ public static class DependencyInjection
         // Register infrastructure services here
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddDbContext<ApplicationDbContext>(options =>
+        {
+            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
+        });
 
         return services;
     }
