@@ -12,16 +12,20 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+
         // Register infrastructure services here
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IUserRepository, UserRepository>();
-        var jwt = configuration.GetRequiredSection("Jwt").Get<JwtOptions>();
         services.Configure<JwtOptions>(configuration.GetRequiredSection("Jwt"));
         services.AddScoped<ITokenGenerator, TokenGenerator>();
         services.AddDbContext<ApplicationDbContext>(options =>
         {
-            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
+            options.UseNpgsql(connectionString);
         });
+
+        services.AddHealthChecks().AddNpgSql(connectionString);
 
         return services;
     }
