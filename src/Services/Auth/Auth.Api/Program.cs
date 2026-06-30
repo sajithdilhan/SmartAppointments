@@ -1,6 +1,7 @@
 using Auth.Api.Middlewares;
 using Auth.Application.Dependency;
 using Auth.Infrastructure.Dependency;
+using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,8 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddAuthentication(builder.Configuration);
+builder.Services.AddAuthorizationWithRoles();
 
 var app = builder.Build();
 
@@ -25,6 +26,7 @@ if (app.Environment.IsDevelopment())
                .WithTheme(ScalarTheme.DeepSpace)
                .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
                .EnableDarkMode();
+        options.AddPreferredSecuritySchemes(["Bearer"]);
     });
 }
 
@@ -33,6 +35,7 @@ app.UseMiddleware<LoggingMiddleware>();
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

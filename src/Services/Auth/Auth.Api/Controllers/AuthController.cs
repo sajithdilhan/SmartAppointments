@@ -2,7 +2,9 @@
 using Auth.Application.Models;
 using Auth.Application.Queries;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SmartAppointments.BuildingBlocks;
 
 namespace Auth.Api.Controllers;
 
@@ -49,6 +51,7 @@ public class AuthController(ISender sender) : ControllerBase
     }
 
     [HttpGet("profile")]
+    [Authorize(Policy = Constants.AllowedOriginsPolicy)]
     public async Task<IActionResult> GetProfile(string email, CancellationToken cancellationToken)
     {
         var query = new GetCustomerQuery(email);
