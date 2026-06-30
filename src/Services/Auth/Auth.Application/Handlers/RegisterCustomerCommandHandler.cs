@@ -10,7 +10,7 @@ using SmartAppointments.BuildingBlocks.Models;
 
 namespace Auth.Application.Handlers;
 
-public sealed class RegisterCustomerCommandHandler(
+public class RegisterCustomerCommandHandler(
     IUserRepository userRepository,
     IPasswordHasher passwordHasher,
     IValidator<RegisterCustomerCommand> validator,

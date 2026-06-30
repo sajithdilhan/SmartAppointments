@@ -1,4 +1,5 @@
 ﻿using Auth.Application.Abstractions;
+using Auth.Application.Models;
 using Auth.Infrastructure.Persistence;
 using Auth.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,9 @@ public static class DependencyInjection
         // Register infrastructure services here
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IUserRepository, UserRepository>();
+        var jwt = configuration.GetRequiredSection("Jwt").Get<JwtOptions>();
+        services.Configure<JwtOptions>(configuration.GetRequiredSection("Jwt"));
+        services.AddScoped<ITokenGenerator, TokenGenerator>();
         services.AddDbContext<ApplicationDbContext>(options =>
         {
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));

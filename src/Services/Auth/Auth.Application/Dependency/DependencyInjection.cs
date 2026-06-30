@@ -12,6 +12,7 @@ public static class DependencyInjection
         // Register application services here
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
         services.AddScoped<IValidator<RegisterCustomerCommand>, RegisterCustomerCommandValidator>();
+        services.AddScoped<IValidator<LoginUserCommand>, LoginUserRequestValidator>();
         return services;
     }
 }
