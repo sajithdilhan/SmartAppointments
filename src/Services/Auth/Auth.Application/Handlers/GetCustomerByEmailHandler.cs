@@ -3,6 +3,7 @@ using Auth.Application.Models;
 using Auth.Application.Queries;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using SmartAppointments.BuildingBlocks.Enums;
 using SmartAppointments.BuildingBlocks.Models;
 
 namespace Auth.Application.Handlers;
@@ -12,10 +13,19 @@ public class GetCustomerByEmailHandler(IUserRepository userRepository,
 {
     public async Task<Result<GetCustomerResponse?>> Handle(GetCustomerQuery request, CancellationToken cancellationToken)
     {
-        var user = await userRepository.GetByEmailAsync(request.Email, cancellationToken);
+        if (string.IsNullOrWhiteSpace(request.CurrentUserEmail) || string.IsNullOrWhiteSpace(request.CurrentUserRole))
+            return Result<GetCustomerResponse?>.Failure(new Error(403, "Permission denied."));
+
+        var requestedEmail = request.RequestedEmail;
+        if (request.CurrentUserRole == UserRole.Customer.ToString())
+        {
+            requestedEmail = request.CurrentUserEmail;
+        }
+
+        var user = await userRepository.GetByEmailAsync(requestedEmail, cancellationToken);
         if (user is null)
         {
-            logger.LogWarning("Customer with email {Email} not found", request.Email);
+            logger.LogWarning("Customer with email {Email} not found", request.RequestedEmail);
             return Result<GetCustomerResponse?>.Failure(new Error(404, "Customer not found"));
         }
 

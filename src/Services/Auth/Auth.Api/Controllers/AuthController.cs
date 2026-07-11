@@ -5,6 +5,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartAppointments.BuildingBlocks;
+using System.Security.Claims;
 
 namespace Auth.Api.Controllers;
 
@@ -54,7 +55,9 @@ public class AuthController(ISender sender) : ControllerBase
     [Authorize(Policy = Constants.AllowedOriginsPolicy)]
     public async Task<IActionResult> GetProfile(string email, CancellationToken cancellationToken)
     {
-        var query = new GetCustomerQuery(email);
+        var currentUserEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+        var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+        var query = new GetCustomerQuery(email, currentUserEmail, currentUserRole);
         var result = await sender.Send(query, cancellationToken);
 
         if (!result.IsSuccess)
