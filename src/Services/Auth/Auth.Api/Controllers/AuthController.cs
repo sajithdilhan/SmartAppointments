@@ -46,8 +46,8 @@ public class AuthController(ISender sender) : ControllerBase
         }
 
         return CreatedAtAction(
-            nameof(Register),
-            new { id = result.Value!.UserId },
+            nameof(GetProfile),
+            new { email = result.Value!.Email },
             result.Value);
     }
 
