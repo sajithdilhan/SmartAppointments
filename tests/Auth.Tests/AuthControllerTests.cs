@@ -6,6 +6,7 @@ using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using SmartAppointments.BuildingBlocks;
 using SmartAppointments.BuildingBlocks.Enums;
 using SmartAppointments.BuildingBlocks.Models;
 using System.Security.Claims;
@@ -96,12 +97,11 @@ public class AuthControllerTests
         // Arrange
         var mockSender = new Mock<ISender>();
         var email = "test@example.com";
-        var getCustomerQuery = new GetCustomerQuery(email, email, UserRole.Customer.ToString());
-       
-        mockSender.Setup(s => s.Send(getCustomerQuery, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<GetCustomerResponse>.Success(new GetCustomerResponse( "John", "Doe", email, "1234567890", true)));
-        
-        var subject = GetSubjectWithHttpContextUser(email, UserRole.Customer, mockSender); 
+
+        mockSender.Setup(s => s.Send(It.IsAny<GetCustomerQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<GetCustomerResponse?>.Success(new GetCustomerResponse("John", "Doe", email, "1234567890", true)));
+
+        var subject = GetSubjectWithHttpContextUser(email, UserRole.Customer, mockSender);
         var cancellationToken = new CancellationToken();
 
         // Act
@@ -112,13 +112,81 @@ public class AuthControllerTests
         Assert.Equal(200, (result as OkObjectResult)?.StatusCode);
     }
 
+    [Fact]
+    public async Task GetProfile_Passes_Caller_Claims_To_The_Query()
+    {
+        // Guards the claim-name contract: the controller must read the same short claim names
+        // the token is issued with, otherwise the handler receives nulls and denies every request.
+        var mockSender = new Mock<ISender>();
+        var email = "test@example.com";
+        GetCustomerQuery? captured = null;
+
+        mockSender.Setup(s => s.Send(It.IsAny<GetCustomerQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<object, CancellationToken>((q, _) => captured = (GetCustomerQuery)q)
+            .ReturnsAsync(Result<GetCustomerResponse?>.Success(new GetCustomerResponse("John", "Doe", email, "1234567890", true)));
+
+        var subject = GetSubjectWithHttpContextUser(email, UserRole.Customer, mockSender);
+
+        // Act
+        await subject.GetProfile(email, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(captured);
+        Assert.Equal(email, captured!.CurrentUserEmail);
+        Assert.Equal(UserRole.Customer.ToString(), captured.CurrentUserRole);
+    }
+
+    [Fact]
+    public async Task GetProfile_NotFound_Returns_NotFound()
+    {
+        // Arrange
+        var mockSender = new Mock<ISender>();
+        var email = "missing@example.com";
+
+        mockSender.Setup(s => s.Send(It.IsAny<GetCustomerQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<GetCustomerResponse?>.Failure(new Error(404, "Customer not found")));
+
+        var subject = GetSubjectWithHttpContextUser(email, UserRole.Customer, mockSender);
+
+        // Act
+        var result = await subject.GetProfile(email, CancellationToken.None);
+
+        // Assert
+        Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Equal(404, (result as NotFoundObjectResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetProfile_WithoutClaims_Returns_NotFound()
+    {
+        // Arrange
+        var mockSender = new Mock<ISender>();
+
+        mockSender.Setup(s => s.Send(It.IsAny<GetCustomerQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<GetCustomerResponse?>.Failure(new Error(403, "Permission denied.")));
+
+        var subject = new AuthController(mockSender.Object)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) }
+            }
+        };
+
+        // Act
+        var result = await subject.GetProfile("test@example.com", CancellationToken.None);
+
+        // Assert
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
     //Set up a mock HttpContext with a user for testing purposes
     private AuthController GetSubjectWithHttpContextUser(string email, UserRole role, Mock<ISender> sender)
     {
        var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
         {
-            new Claim(ClaimTypes.Email, email),
-            new Claim(ClaimTypes.Role, role.ToString())
+            new Claim(Constants.EmailClaimType, email),
+            new Claim(Constants.RoleClaimType, role.ToString())
         }, "mock"));
         var httpContext = new DefaultHttpContext
         {

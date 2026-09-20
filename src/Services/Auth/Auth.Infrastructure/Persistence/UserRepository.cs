@@ -18,4 +18,9 @@ public class UserRepository(ApplicationDbContext context) : IUserRepository
         var emailAdd = Email.Create(email);
         return await context.Users.FirstOrDefaultAsync(u => u.Email == emailAdd, cancellationToken);
     }
+
+    public async Task SaveChangesAsync(CancellationToken cancellationToken)
+    {
+        await context.SaveChangesAsync(cancellationToken);
+    }
 }

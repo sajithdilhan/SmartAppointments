@@ -1,6 +1,7 @@
 using Auth.Api.Middlewares;
 using Auth.Application.Dependency;
 using Auth.Infrastructure.Dependency;
+using Auth.Infrastructure.Persistence;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
@@ -15,6 +16,8 @@ builder.Services.AddAuthentication(builder.Configuration);
 builder.Services.AddAuthorizationWithRoles();
 
 var app = builder.Build();
+
+await DatabaseSeeder.SeedAsync(app.Services);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

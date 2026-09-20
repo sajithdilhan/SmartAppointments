@@ -5,6 +5,8 @@ namespace SmartAppointments.BuildingBlocks;
 public static class Constants
 {
     public const string RoleClaimType = "role";
+    public const string EmailClaimType = "email";
+    public const string UserIdClaimType = "sub";
     public const string AdminRole = nameof(UserRole.Admin);
     public const string StaffRole = nameof(UserRole.Staff);
     public const string CustomerRole = nameof(UserRole.Customer);
