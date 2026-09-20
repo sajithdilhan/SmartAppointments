@@ -1,12 +1,14 @@
-# Auth identity — Requirements
+﻿# Auth identity — Requirements
 
 > **Retro-fitted spec.** This was written after the Auth service was built. Every acceptance criterion below was derived from code that exists in `src/Services/Auth/` and, where noted, from a test in `tests/Auth.Tests/`. Where the implementation differs from `docs/requirements.md`, the discrepancy is recorded rather than smoothed over.
 
 ## Introduction
 
-The Auth service owns user identity for the whole system: it is the only service that stores credentials and the only issuer of JWTs. This spec covers the three capabilities that are implemented today — customer self-registration, credential login, and profile retrieval — plus the role-based authorization scheme every other service will consume.
+The Auth service owns user identity for the whole system: it is the only service that stores credentials and the only issuer of JWTs. This spec covers customer self-registration, credential login, profile retrieval, the session lifecycle that refresh and logout give those tokens, and the role-based authorization scheme every other service will consume.
 
-Registration, login and profile reads share the `User` aggregate and a single design, which is why they form one spec rather than three. It refines sections 8 (Authentication), 9 and 10 of [`docs/requirements.md`](../../requirements.md) and covers `FR-AUTH-001`, `FR-AUTH-002` and `FR-AUTH-003`.
+These belong in one spec rather than several because they share the `User` aggregate and a single design: the same `Result<T>` error contract, the same repository staging rules, the same claim names. It refines sections 8 (Authentication), 9 and 10 of [`docs/requirements.md`](../../requirements.md) and covers `FR-AUTH-001` through `FR-AUTH-005`.
+
+Requirements 1–5 are built and tested. Requirements 6 and 7 are approved and not yet built — [`tasks.md`](tasks.md) tracks which is which.
 
 ## Requirements
 
@@ -27,6 +29,8 @@ Registration, login and profile reads share the `User` aggregate and a single de
    _Test: `RegisterCustomerCommandHandlerTests.Invalid_Request_Is_Rejected_Without_Writing`_
 4. IF the email is already registered, THEN the system SHALL return `400 Bad Request` with "Email is already registered." and SHALL NOT write to the database.
    _Tests: `RegisterCustomerCommandHandlerTests.Duplicate_Email_Is_Rejected_Without_Writing`, `AuthControllerTests.Register_Failure_Returns_BadRequest`_
+4. WHERE the duplicate is only discovered at commit time because a concurrent registration won the race, the system SHALL return the same `400 Bad Request` rather than surfacing the unique-index violation as a `500`. *(1.4a)*
+   _Test: `RegisterCustomerCommandHandlerTests.Duplicate_Detected_Only_At_Commit_Returns_400_Not_500`_
 5. WHEN checking for a duplicate, THEN the system SHALL use the read-only (no-tracking) query, not the for-update query.
    _Test: `RegisterCustomerCommandHandlerTests.Duplicate_Check_Uses_The_Read_Only_Query`_
 6. WHEN a password is stored, THEN the system SHALL store only a BCrypt hash and SHALL NOT persist or log the plaintext.
@@ -47,7 +51,8 @@ Registration, login and profile reads share the `User` aggregate and a single de
    _Test: `LoginUserHandlerTests.Any_Active_Role_Can_Log_In` (theory over all three roles)_
 3. IF the email is unknown, OR the account is inactive, OR the password does not verify, THEN the system SHALL return `401 Unauthorized` with the single message "Invalid user or password.", so that the endpoint cannot be used to discover which addresses are registered.
    _Tests: `LoginUserHandlerTests.Unknown_Email_Returns_401_Not_404`, `Inactive_User_Is_Rejected`, `Wrong_Password_Is_Rejected`, `AuthControllerTests.Login_Failure_Returns_Unauthorized`_
-4. IF the email is missing or malformed, or the password is missing, THEN the system SHALL return `400 Bad Request` listing the failed rules.
+4. IF the email is missing or malformed, or the password is missing, THEN the system SHALL return `400 Bad Request` listing the failed rules — not the `401` that this endpoint returns for a credential failure.
+   _Test: `AuthControllerTests.Login_ValidationFailure_Returns_BadRequest`_
 5. WHEN a login succeeds, THEN the system SHALL set `LastLoginAtUtc` to the current UTC time and persist it.
    _Test: `LoginUserHandlerTests.Successful_Login_Records_The_Login_Timestamp`_
 6. WHEN reading the user during login, THEN the system SHALL use the for-update (tracked) query, because the login timestamp is about to be mutated.
@@ -67,13 +72,17 @@ Registration, login and profile reads share the `User` aggregate and a single de
 
 1. WHEN an authenticated caller holding any of the three roles GETs `/api/Auth/profile?email=...`, THEN the system SHALL return `200 OK` with `{ FirstName, LastName, Email, PhoneNumber, IsActive }`.
    _Test: `AuthControllerTests.GetProfile_Successful_Returns_Ok`_
+1. WHEN an authenticated caller GETs `/api/Auth/me`, THEN the system SHALL resolve the subject from the token's `email` claim, take no email parameter, and return the same body. *(3.1a)*
+   _Test: `AuthControllerTests.GetMe_Resolves_The_Caller_From_The_Token`_
+1. IF the resolved email is blank or contains no `@`, THEN the system SHALL return `400 Bad Request` and SHALL NOT query the database. *(3.1b)*
+   _Tests: `GetCustomerByEmailHandlerTests.Malformed_Requested_Email_Returns_400_Without_Querying`, `AuthControllerTests.GetProfile_MalformedEmail_Returns_BadRequest`_
 2. IF the caller presents no token, or a token whose role is none of `Customer`, `Staff`, `Admin`, THEN the system SHALL reject the request at the authorization policy before the handler runs.
 3. WHERE the caller's role is `Customer`, the system SHALL ignore the requested email and return the caller's own profile, so that one customer cannot read another's details.
    _Test: `GetCustomerByEmailHandlerTests.Customer_Requesting_Another_Address_Gets_Their_Own_Profile`_
 4. WHERE the caller's role is `Staff` or `Admin`, the system SHALL return the profile for the requested email.
    _Test: `GetCustomerByEmailHandlerTests.Admin_Reads_The_Requested_Address`_
-5. IF the token is missing the `email` or `role` claim, THEN the system SHALL deny the request and SHALL NOT query the database.
-   _Tests: `GetCustomerByEmailHandlerTests.Missing_Caller_Claims_Are_Denied`, `AuthControllerTests.GetProfile_WithoutClaims_Returns_NotFound`_
+5. IF the token is missing the `email` or `role` claim, THEN the system SHALL deny the request with `403 Forbidden` and SHALL NOT query the database.
+   _Tests: `GetCustomerByEmailHandlerTests.Missing_Caller_Claims_Are_Denied`, `AuthControllerTests.GetProfile_WithoutClaims_Returns_Forbidden`, `AuthControllerTests.GetMe_WithoutClaims_Returns_Forbidden`_
 6. IF no user exists for the resolved email, THEN the system SHALL return `404 Not Found`.
    _Tests: `GetCustomerByEmailHandlerTests.Unknown_Address_Returns_404`, `AuthControllerTests.GetProfile_NotFound_Returns_NotFound`_
 7. WHEN reading a profile, THEN the system SHALL use the read-only (no-tracking) query.
@@ -95,11 +104,58 @@ Registration, login and profile reads share the `User` aggregate and a single de
 2. IF the `Seed:Admin` section is absent or incomplete, THEN the system SHALL start normally without seeding.
 3. IF any administrator already exists, THEN the system SHALL NOT create another.
 
+### Requirement 5: Keep credentials out of source control
+
+**User Story:** As an operator, I want every secret the service needs to come from outside the repository, so that cloning the repository does not hand anyone a signing key or a database password.
+
+*(No FR-ID — this refines the security non-functional requirements in [`docs/requirements.md`](../../requirements.md).)*
+
+#### Acceptance Criteria
+
+1. WHERE a configuration value is a secret — the database connection string and the JWT signing key — the checked-in `appsettings.json` SHALL carry an empty placeholder and nothing more.
+2. IF `ConnectionStrings:DefaultConnection` is absent or blank at startup, THEN the system SHALL throw an `InvalidOperationException` naming the key and the `dotnet user-secrets` command that sets it, rather than starting and failing on the first request.
+3. IF `Jwt:SecretKey` is absent or blank at startup, THEN the system SHALL throw the equivalent exception, and SHALL NOT fall back to any default key.
+4. IF `Jwt:SecretKey` is shorter than 32 bytes, THEN the system SHALL refuse to start, because a shorter key does not safely carry HMAC-SHA256.
+5. IF `Jwt:Issuer` or `Jwt:Audience` is blank, THEN the system SHALL refuse to start.
+
+### Requirement 6: Redeem and rotate a refresh token (FR-AUTH-004)
+
+**User Story:** As a signed-in user, I want a short-lived access token to be renewed silently in the background, so that I stay signed in for a working day without my credentials being held by the client or re-entered every hour.
+
+*(`docs/requirements.md` names a refresh token in the auth section but specifies no redemption flow. `FR-AUTH-004` is claimed here and should be written back into the BRD.)*
+
+#### Acceptance Criteria
+
+1. WHEN a login succeeds, THEN the system SHALL persist the issued refresh token alongside the user it belongs to, the UTC time it was issued, and an expiry of `Jwt:RefreshTokenExpirationDays` days from issue.
+2. WHERE a refresh token is persisted, the system SHALL store a SHA-256 hash of it and never the token itself, so that read access to the database does not confer the ability to mint access tokens.
+3. WHEN an anonymous caller POSTs a refresh token to `/api/Auth/refresh`, AND that token is found, unexpired, unrevoked and belongs to an active user, THEN the system SHALL return `200 OK` with a new `{ AccessToken, RefreshToken }` pair.
+4. WHEN a refresh token is redeemed, THEN the system SHALL revoke it and record the replacement that supersedes it, committing both in the same transaction that issues the replacement, so that each token is redeemable exactly once.
+5. IF the presented token is unknown, expired, already redeemed, revoked, or belongs to an inactive user, THEN the system SHALL return `401 Unauthorized` with a single undifferentiated message, for the same account-enumeration reason as Requirement 2.3.
+6. WHEN a token that has already been redeemed is presented a second time, THEN the system SHALL additionally revoke every token descended from it, because a second presentation means either the token leaked or the client is replaying, and neither is safe to keep alive.
+7. WHEN a login or a refresh succeeds, THEN the system SHALL delete that user's already-expired refresh tokens, so that the table stays bounded without a scheduled job.
+8. WHEN a refresh token is generated, THEN the system SHALL continue to use the 64 cryptographically random bytes of Requirement 2.10 — this requirement changes what happens to the token, not how it is made.
+9. WHERE a user signs in on more than one device, the system SHALL allow them to hold several live refresh tokens at once, one per login.
+
+*Deliberately excluded:* no grace window for concurrent redemption. Two clients redeeming the same token within milliseconds is indistinguishable from the replay of criterion 6 and is treated as one, which is the stricter and simpler reading.
+
+### Requirement 7: Log out (FR-AUTH-005)
+
+**User Story:** As a signed-in user, I want to log out, so that the session I am ending cannot be resumed from the device I am leaving.
+
+#### Acceptance Criteria
+
+1. WHEN a caller POSTs a refresh token to `/api/Auth/logout`, THEN the system SHALL revoke that token so that Requirement 6 criterion 5 rejects any later attempt to redeem it.
+2. WHEN logout revokes a token, THEN the system SHALL revoke only the token presented, and SHALL leave that user's other live refresh tokens alone, so that signing out on one device does not end the session on another (Req 6.9).
+3. WHEN logout is called, THEN the system SHALL return `204 No Content` whether or not the presented token existed, was already revoked, or had expired, so that the endpoint is idempotent and cannot be used to discover which tokens are live.
+4. WHERE a token was revoked by logout rather than redeemed, presenting it to `/api/Auth/refresh` SHALL fail under Requirement 6 criterion 5 but SHALL NOT trigger the chain revocation of criterion 6 — an explicit logout is not evidence of a leak, and a logged-out token has no descendants in any case.
+5. WHERE the caller's access token has already expired, the system SHALL still accept the logout, because possession of the refresh token is the only credential the endpoint needs and refusing would leave the token live.
+6. WHEN a logout succeeds, THEN the system SHALL NOT invalidate any access token already issued — those remain valid until they expire, which is the accepted cost of stateless JWT validation and is bounded by `Jwt:AccessTokenExpirationMinutes`.
+
 ## Discrepancies with the BRD
 
 | BRD | Implementation | Decision |
 |---|---|---|
-| `GET /api/auth/me` | `GET /api/Auth/profile?email=` | The implemented endpoint is broader: it serves the caller's own profile *and* staff/admin lookups of others, with the customer case forced back to "me" in the handler. Requirement 3 documents the endpoint as built. A dedicated `/me` route that takes no parameter would be a clearer API and is listed as a known gap. |
+| `GET /api/auth/me` | `GET /api/Auth/me` **and** `GET /api/Auth/profile?email=` | Resolved. `/me` now exists and takes no parameter (Req 3.1a); `/profile?email=` remains for the staff and admin lookup case, with the customer case still forced back to "me" in the handler (Req 3.3). Both dispatch the same `GetCustomerQuery`. |
 | Routes are lower-case in the BRD (`/api/auth/...`) | The controller uses `[Route("api/[controller]")]`, so the route is `/api/Auth/...` | Cosmetic, but ASP.NET routing is case-insensitive on match, so both forms work. Left as-is. |
 | FR-AUTH-001 says "full name" | Stored as separate `FirstName` / `LastName`, with a computed `FullName` | The implementation is the better model. No change. |
 
@@ -110,15 +166,20 @@ These exist in the code but are not requirements yet, because nothing reachable 
 - **Staff and admin registration** — `User.RegisterStaff` and `User.RegisterAdmin` exist; only `RegisterAdmin` has a caller (the seeder), and there is no endpoint for either.
 - **Account activation and deactivation** — `User.Deactivate()` / `User.Activate()` exist with no caller. Login already refuses inactive accounts (Req 2.3), so only the administrative action is missing.
 - **Password change** — `User.ChangePassword(hash)` exists with no caller, no endpoint, and no reset/forgot-password flow.
-- **Refresh token redemption** — a refresh token is generated and returned (Req 2.10) and `JwtOptions.RefreshTokenExpirationDays` is configured, but the token is never persisted and no endpoint accepts it. It is currently an opaque string the client can do nothing with.
-- **Logout / token revocation** — no server-side token invalidation of any kind.
+- ~~**Refresh token redemption**~~ — moved into scope as Requirement 6.
+- ~~**Logout / token revocation**~~ — moved into scope as Requirement 7, limited to refresh-token revocation. Access tokens remain valid until they expire (Req 7.6); revoking those would mean a denylist checked on every request in every service, which is a different design decision and is not being made here.
 
 ## Known gaps
 
-Each has a matching unchecked item in [`tasks.md`](tasks.md).
+Gaps 1–5 have been closed; each has a matching checked item in [`tasks.md`](tasks.md). They are kept here rather than deleted so the record of what was wrong, and how it was fixed, survives.
 
-1. **Secrets are committed.** The JWT `SecretKey` and the PostgreSQL password are hard-coded in `src/Services/Auth/Auth.Api/appsettings.json`, which is in source control. They belong in user-secrets locally and in environment variables or a secret store elsewhere.
-2. **The profile endpoint reports 403 as 404.** `GetCustomerByEmailHandler` returns `Error(403, "Permission denied.")` when the caller's claims are missing, but `AuthController.GetProfile` maps every failure to `NotFound`, so the status is lost. The controller should switch on `result.Error.Status`. `AuthControllerTests.GetProfile_WithoutClaims_Returns_NotFound` currently asserts the wrong behaviour and would need updating with the fix.
-3. **No `/me` route.** See the discrepancy table — a customer must pass an email parameter that is then ignored.
-4. **Registration relies on a read-then-write duplicate check.** Two concurrent registrations for the same address both pass the check and the second fails on the unique index as an unhandled `DbUpdateException`, surfacing as a 500 rather than the 400 of Req 1.4.
-5. **Several units are untested**: `Email`, `PasswordHasher`, `UserRepository`, `DatabaseSeeder`, `ExceptionMiddleware`, `LoggingMiddleware`, and both validators in isolation.
+1. ~~**Secrets are committed.**~~ Closed. `appsettings.json` now carries empty placeholders and the service fails fast on either missing value — see Requirement 5. The keys and the `dotnet user-secrets` commands are documented in `CLAUDE.md`.
+2. ~~**The profile endpoint reports 403 as 404.**~~ Closed. `AuthController` routes every failure through a single `ToErrorResult(Error)` that switches on `Error.Status`, so 400, 401, 403, 404 and 409 each reach the caller intact. This is the shape every future controller should copy.
+3. ~~**No `/me` route.**~~ Closed. See the discrepancy table.
+4. ~~**Registration relies on a read-then-write duplicate check.**~~ Closed, though the pre-check itself remains — it is still the cheap common path and avoids a wasted BCrypt hash. The race is handled at the other end: `UserRepository` translates PostgreSQL SQLSTATE `23505` into `DuplicateEmailException`, which the handler converts into the same 400 (Req 1.4a).
+5. ~~**Several units are untested.**~~ Mostly closed. `Email`, `PasswordHasher`, `ExceptionMiddleware` and both validators now have dedicated test classes, and the suite went from 28 executed cases to 88. Still untested: `UserRepository`, `DatabaseSeeder` and `LoggingMiddleware`, each of which needs a real database or a full request pipeline. They are deferred to an integration-test harness rather than forced into the pure-unit-test convention.
+
+### Still open
+
+6. **The refresh token is issued but unredeemable.** Specified as Requirements 6 and 7; see [`tasks.md`](tasks.md) tasks 15–16. Open until those ship.
+7. **No MediatR validation pipeline behaviour.** Each handler calls its own validator, so a future handler that forgets to is silently unvalidated. A `ValidationBehavior<TRequest, TResponse>` in `Auth.Application` would make validation structural rather than a convention. Not yet specced.

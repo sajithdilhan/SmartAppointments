@@ -49,9 +49,36 @@ public static class DependencyInjection
         return services;
     }
 
+    /// <summary>
+    /// The shortest HS256 key that is not trivially brute-forceable. A shorter one is a
+    /// configuration mistake, not a preference, so startup fails rather than signing with it.
+    /// </summary>
+    private const int MinimumSecretKeyBytes = 32;
+
     public static IServiceCollection AddAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
-        var authSettings = configuration.GetSection("Jwt").Get<JwtOptions>();
+        var authSettings = configuration.GetSection("Jwt").Get<JwtOptions>()
+            ?? throw new InvalidOperationException("The 'Jwt' configuration section is missing.");
+
+        // The secret is deliberately absent from appsettings.json, so an unconfigured environment
+        // must fail loudly at startup rather than fall back to a value committed to source control.
+        if (string.IsNullOrWhiteSpace(authSettings.SecretKey))
+        {
+            throw new InvalidOperationException(
+                "'Jwt:SecretKey' is not configured. Set it with 'dotnet user-secrets set \"Jwt:SecretKey\" \"<key>\"' " +
+                "for local development, or through the environment in every other environment.");
+        }
+
+        if (Encoding.UTF8.GetByteCount(authSettings.SecretKey) < MinimumSecretKeyBytes)
+        {
+            throw new InvalidOperationException(
+                $"'Jwt:SecretKey' must be at least {MinimumSecretKeyBytes} bytes long to sign HMAC-SHA256 tokens.");
+        }
+
+        if (string.IsNullOrWhiteSpace(authSettings.Issuer) || string.IsNullOrWhiteSpace(authSettings.Audience))
+        {
+            throw new InvalidOperationException("'Jwt:Issuer' and 'Jwt:Audience' must both be configured.");
+        }
 
         services.AddAuthentication(options =>
         {
@@ -67,9 +94,9 @@ public static class DependencyInjection
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = authSettings!.Issuer,
-                ValidAudience = authSettings!.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authSettings!.SecretKey)),
+                ValidIssuer = authSettings.Issuer,
+                ValidAudience = authSettings.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authSettings.SecretKey)),
                 NameClaimType = ClaimTypes.Name,
                 RoleClaimType = Constants.RoleClaimType,
                 ClockSkew = TimeSpan.Zero

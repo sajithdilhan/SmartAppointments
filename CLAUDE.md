@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -35,6 +35,21 @@ dotnet test tests/Auth.Tests/Auth.Tests.csproj --filter "FullyQualifiedName~Auth
 dotnet ef migrations add <Name> --project src/Services/Auth/Auth.Infrastructure --startup-project src/Services/Auth/Auth.Api
 dotnet ef database update --project src/Services/Auth/Auth.Infrastructure --startup-project src/Services/Auth/Auth.Api
 ```
+
+### Local secrets
+
+`src/Services/Auth/Auth.Api/appsettings.json` deliberately ships `ConnectionStrings:DefaultConnection`
+and `Jwt:SecretKey` as empty strings — they are the two values that must never be committed. The Auth
+service fails at startup with an explanatory message if either is missing, so set them once per machine:
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=smart_appointment_users;Username=postgres;Password=<password>" --project src/Services/Auth/Auth.Api
+dotnet user-secrets set "Jwt:SecretKey" "<at least 32 bytes of random text>" --project src/Services/Auth/Auth.Api
+```
+
+Outside local development both come from the environment (`ConnectionStrings__DefaultConnection`,
+`Jwt__SecretKey`). The optional `Seed:Admin` section (`Email`, `Password`, `FirstName`, `LastName`,
+`PhoneNumber`) also belongs in user-secrets; without all five keys the seeder is inert.
 
 There is no `global.json`, so the SDK floats to whatever is installed locally (target framework is `net10.0` across all projects). There is no `docker-compose.yml`, `.editorconfig`, or `Directory.Build.props` at the repo root yet.
 

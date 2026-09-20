@@ -22,6 +22,14 @@ public class GetCustomerByEmailHandler(IUserRepository userRepository,
             requestedEmail = request.CurrentUserEmail;
         }
 
+        // The repository normalises through Email.Create, which throws on a blank or '@'-less
+        // value. Rejecting it here keeps a bad query string a 400 instead of a 500.
+        if (string.IsNullOrWhiteSpace(requestedEmail) || !requestedEmail.Contains('@'))
+        {
+            logger.LogWarning("Profile requested with a malformed email value.");
+            return Result<GetCustomerResponse?>.Failure(new Error(400, "A valid email is required."));
+        }
+
         var user = await userRepository.GetByEmailAsync(requestedEmail, cancellationToken);
         if (user is null)
         {

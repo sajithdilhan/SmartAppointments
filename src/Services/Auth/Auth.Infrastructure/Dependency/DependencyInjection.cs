@@ -12,8 +12,16 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+        // Left blank in appsettings.json on purpose: it carries the database password, so it is
+        // supplied from user-secrets locally and from the environment everywhere else.
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "Connection string 'DefaultConnection' is not configured. Set it with " +
+                "'dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"<connection string>\"' " +
+                "for local development, or through the environment in every other environment.");
+        }
 
         // Register infrastructure services here
         services.AddScoped<IPasswordHasher, PasswordHasher>();
