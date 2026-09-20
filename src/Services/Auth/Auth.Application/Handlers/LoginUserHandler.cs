@@ -33,7 +33,7 @@ public class LoginUserHandler(
 
         // Unknown email, inactive account and wrong password all return the same 401 so the
         // endpoint cannot be used to enumerate which addresses are registered.
-        var user = await userRepository.GetByEmailAsync(request.Email, cancellationToken);
+        var user = await userRepository.GetForUpdateByEmailAsync(request.Email, cancellationToken);
         if (user is null || !user.IsActive)
         {
             logger.LogWarning("Login failed for {Email}.", request.Email);

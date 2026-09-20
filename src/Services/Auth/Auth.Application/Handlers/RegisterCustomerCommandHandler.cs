@@ -45,7 +45,8 @@ public class RegisterCustomerCommandHandler(
             request.PhoneNumber,
             passwordHash);
 
-        await userRepository.CreateCustomer(user, cancellationToken);
+        await userRepository.AddAsync(user, cancellationToken);
+        await userRepository.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Successfully registered new customer with email: {Email}", request.Email);
 
         return Result<RegisterCustomerResponse>.Success(new RegisterCustomerResponse(

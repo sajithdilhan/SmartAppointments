@@ -101,7 +101,7 @@ public class LoginUserHandlerTests
     private static Mock<IUserRepository> CreateRepository(User? user)
     {
         var repository = new Mock<IUserRepository>();
-        repository.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        repository.Setup(r => r.GetForUpdateByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
         return repository;
     }
