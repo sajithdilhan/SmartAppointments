@@ -10,6 +10,12 @@
     <Project Path="src/Services/Auth/Auth.Domain/Auth.Domain.csproj" />
     <Project Path="src/Services/Auth/Auth.Infrastructure/Auth.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Services/Availability/">
+    <Project Path="src/Services/Availability/Availability.Api/Availability.Api.csproj" Id="62db65c0-6080-481c-859f-77332668a83b" />
+    <Project Path="src/Services/Availability/Availability.Application/Availability.Application.csproj" Id="31720772-4320-47a1-a66c-92f285c664c6" />
+    <Project Path="src/Services/Availability/Availability.Domain/Availability.Domain.csproj" Id="57fc67b0-bb48-44cc-a53f-b90c6b18f6f8" />
+    <Project Path="src/Services/Availability/Availability.Infrastructure/Availability.Infrastructure.csproj" Id="6b1c2d39-d7a3-4096-992b-6c60f404eeb2" />
+  </Folder>
   <Folder Name="/src/Shared/">
     <Project Path="src/Shared/SmartAppointments.BuildingBlocks/SmartAppointments.BuildingBlocks.csproj" />
   </Folder>
