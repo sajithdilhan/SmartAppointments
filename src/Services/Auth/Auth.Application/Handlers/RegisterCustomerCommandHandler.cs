@@ -46,7 +46,19 @@ public class RegisterCustomerCommandHandler(
             passwordHash);
 
         await userRepository.AddAsync(user, cancellationToken);
-        await userRepository.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await userRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch (DuplicateEmailException)
+        {
+            // Two concurrent registrations for the same address both pass the check above; the
+            // unique index rejects the second. The caller gets the same 400 either way.
+            logger.LogWarning("Concurrent registration lost the race for email: {Email}", request.Email);
+            return Result<RegisterCustomerResponse>.Failure(new Error(400, "Email is already registered."));
+        }
+
         logger.LogInformation("Successfully registered new customer with email: {Email}", request.Email);
 
         return Result<RegisterCustomerResponse>.Success(new RegisterCustomerResponse(

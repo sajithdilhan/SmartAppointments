@@ -157,9 +157,10 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public async Task GetProfile_WithoutClaims_Returns_NotFound()
+    public async Task GetProfile_WithoutClaims_Returns_Forbidden()
     {
-        // Arrange
+        // The handler denies with 403; the controller must report that status rather than
+        // collapsing every failure into 404, which is what it used to do.
         var mockSender = new Mock<ISender>();
 
         mockSender.Setup(s => s.Send(It.IsAny<GetCustomerQuery>(), It.IsAny<CancellationToken>()))
@@ -177,7 +178,95 @@ public class AuthControllerTests
         var result = await subject.GetProfile("test@example.com", CancellationToken.None);
 
         // Assert
-        Assert.IsType<NotFoundObjectResult>(result);
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, objectResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetProfile_MalformedEmail_Returns_BadRequest()
+    {
+        var mockSender = new Mock<ISender>();
+
+        mockSender.Setup(s => s.Send(It.IsAny<GetCustomerQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<GetCustomerResponse?>.Failure(new Error(400, "A valid email is required.")));
+
+        var subject = GetSubjectWithHttpContextUser("admin@example.com", UserRole.Admin, mockSender);
+
+        // Act
+        var result = await subject.GetProfile("not-an-email", CancellationToken.None);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(400, (result as BadRequestObjectResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_ValidationFailure_Returns_BadRequest()
+    {
+        // A 400 from the validator used to be reported as 401 because Login returned a fixed
+        // Unauthorized for every failure.
+        var mockSender = new Mock<ISender>();
+        var loginRequest = new UserLoginRequest("not-an-email", "");
+        mockSender.Setup(s => s.Send(It.IsAny<LoginUserCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<TokenResponse>.Failure(new Error(400, "Invalid request: Email is required.")));
+
+        var subject = new AuthController(mockSender.Object);
+
+        // Act
+        var result = await subject.Login(loginRequest);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(400, (result as BadRequestObjectResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMe_Resolves_The_Caller_From_The_Token()
+    {
+        // /me takes no email parameter at all: the requested address must come from the claims.
+        var mockSender = new Mock<ISender>();
+        var email = "caller@example.com";
+        GetCustomerQuery? captured = null;
+
+        mockSender.Setup(s => s.Send(It.IsAny<GetCustomerQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<object, CancellationToken>((q, _) => captured = (GetCustomerQuery)q)
+            .ReturnsAsync(Result<GetCustomerResponse?>.Success(new GetCustomerResponse("John", "Doe", email, "1234567890", true)));
+
+        var subject = GetSubjectWithHttpContextUser(email, UserRole.Staff, mockSender);
+
+        // Act
+        var result = await subject.GetMe(CancellationToken.None);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(captured);
+        Assert.Equal(email, captured!.RequestedEmail);
+        Assert.Equal(email, captured.CurrentUserEmail);
+        Assert.Equal(UserRole.Staff.ToString(), captured.CurrentUserRole);
+    }
+
+    [Fact]
+    public async Task GetMe_WithoutClaims_Returns_Forbidden()
+    {
+        var mockSender = new Mock<ISender>();
+
+        mockSender.Setup(s => s.Send(It.IsAny<GetCustomerQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<GetCustomerResponse?>.Failure(new Error(403, "Permission denied.")));
+
+        var subject = new AuthController(mockSender.Object)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) }
+            }
+        };
+
+        // Act
+        var result = await subject.GetMe(CancellationToken.None);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, objectResult.StatusCode);
     }
 
     //Set up a mock HttpContext with a user for testing purposes

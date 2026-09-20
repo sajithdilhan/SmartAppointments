@@ -1,4 +1,4 @@
-using Auth.Application.Abstractions;
+﻿using Auth.Application.Abstractions;
 using Auth.Application.Handlers;
 using Auth.Application.Queries;
 using Auth.Domain.Entities;
@@ -70,6 +70,24 @@ public class GetCustomerByEmailHandlerTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(404, result.Error!.Status);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("not-an-email")]
+    public async Task Malformed_Requested_Email_Returns_400_Without_Querying(string email)
+    {
+        // These values reach Email.Create through the repository and throw ArgumentException,
+        // which ExceptionMiddleware would report as a 500 for what is a caller mistake.
+        var repository = CreateRepository(CreateCustomer("cam@example.com"));
+        var query = new GetCustomerQuery(email, "admin@example.com", nameof(UserRole.Admin));
+
+        var result = await CreateSubject(repository).Handle(query, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(400, result.Error!.Status);
+        repository.Verify(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static GetCustomerByEmailHandler CreateSubject(Mock<IUserRepository> repository) =>

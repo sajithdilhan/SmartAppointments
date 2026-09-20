@@ -2,6 +2,7 @@
 using Auth.Domain.Entities;
 using Auth.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Auth.Infrastructure.Persistence;
 
@@ -24,8 +25,22 @@ public class UserRepository(ApplicationDbContext context) : IUserRepository
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
     {
-        await context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            // Translated here rather than leaking DbUpdateException upwards: the Application layer
+            // has no EF Core reference and should not learn one to handle a duplicate address.
+            throw new DuplicateEmailException("Email is already registered.", ex);
+        }
     }
+
+    // 23505 is the PostgreSQL unique_violation SQLSTATE. Users has exactly one unique index,
+    // IX_Users_Email, so a unique violation on this context can only be the email.
+    private static bool IsUniqueViolation(DbUpdateException ex) =>
+        ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
 
     // Goes through Email.Create so the lookup is normalised the same way the stored value was,
     // rather than comparing against whatever casing or whitespace the caller happened to supply.

@@ -5,6 +5,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartAppointments.BuildingBlocks;
+using SmartAppointments.BuildingBlocks.Models;
 
 namespace Auth.Api.Controllers;
 
@@ -21,7 +22,7 @@ public class AuthController(ISender sender) : ControllerBase
 
         if (!result.IsSuccess)
         {
-            return Unauthorized(result.Error);
+            return ToErrorResult(result.Error!);
         }
 
         return Ok(result.Value);
@@ -41,7 +42,7 @@ public class AuthController(ISender sender) : ControllerBase
 
         if (!result.IsSuccess)
         {
-            return BadRequest(result.Error);
+            return ToErrorResult(result.Error!);
         }
 
         return CreatedAtAction(
@@ -50,9 +51,30 @@ public class AuthController(ISender sender) : ControllerBase
             result.Value);
     }
 
+    /// <summary>
+    /// Looks up a profile by email. A Customer caller always gets their own profile back
+    /// regardless of what they ask for; Staff and Admin get the address they requested.
+    /// </summary>
     [HttpGet("profile")]
     [Authorize(Policy = Constants.AllowedOriginsPolicy)]
     public async Task<IActionResult> GetProfile(string email, CancellationToken cancellationToken)
+    {
+        return await SendProfileQuery(email, cancellationToken);
+    }
+
+    /// <summary>
+    /// Returns the caller's own profile, resolved from the token, with no email parameter to
+    /// supply or ignore. Callers who need to look up somebody else use <see cref="GetProfile"/>.
+    /// </summary>
+    [HttpGet("me")]
+    [Authorize(Policy = Constants.AllowedOriginsPolicy)]
+    public async Task<IActionResult> GetMe(CancellationToken cancellationToken)
+    {
+        var currentUserEmail = User.FindFirst(Constants.EmailClaimType)?.Value;
+        return await SendProfileQuery(currentUserEmail ?? string.Empty, cancellationToken);
+    }
+
+    private async Task<IActionResult> SendProfileQuery(string email, CancellationToken cancellationToken)
     {
         var currentUserEmail = User.FindFirst(Constants.EmailClaimType)?.Value;
         var currentUserRole = User.FindFirst(Constants.RoleClaimType)?.Value;
@@ -61,9 +83,21 @@ public class AuthController(ISender sender) : ControllerBase
 
         if (!result.IsSuccess)
         {
-            return NotFound(result.Error);
+            return ToErrorResult(result.Error!);
         }
 
         return Ok(result.Value);
     }
+
+    // Every failure path goes through here so the status a handler chose is the status the caller
+    // sees. Branching on IsSuccess alone used to collapse 403 into 404 and 400 into 401.
+    private ObjectResult ToErrorResult(Error error) => error.Status switch
+    {
+        StatusCodes.Status400BadRequest => BadRequest(error),
+        StatusCodes.Status401Unauthorized => Unauthorized(error),
+        StatusCodes.Status403Forbidden => StatusCode(StatusCodes.Status403Forbidden, error),
+        StatusCodes.Status404NotFound => NotFound(error),
+        StatusCodes.Status409Conflict => Conflict(error),
+        _ => StatusCode(StatusCodes.Status500InternalServerError, error)
+    };
 }

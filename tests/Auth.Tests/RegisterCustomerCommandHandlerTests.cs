@@ -1,4 +1,4 @@
-using Auth.Application.Abstractions;
+﻿using Auth.Application.Abstractions;
 using Auth.Application.Commands;
 using Auth.Application.Handlers;
 using Auth.Application.Validations;
@@ -65,6 +65,23 @@ public class RegisterCustomerCommandHandlerTests
         Assert.False(result.IsSuccess);
         Assert.Equal(400, result.Error!.Status);
         repository.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Duplicate_Detected_Only_At_Commit_Returns_400_Not_500()
+    {
+        // Two concurrent registrations both pass the read-then-write check; the unique index
+        // rejects the loser at commit. That must read as the same 400 as the pre-check, not as
+        // an unhandled exception surfacing through ExceptionMiddleware as a 500.
+        var repository = CreateRepository(existing: null);
+        repository.Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DuplicateEmailException("Email is already registered."));
+
+        var result = await CreateSubject(repository).Handle(ValidCommand, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(400, result.Error!.Status);
+        Assert.Equal("Email is already registered.", result.Error.Details);
     }
 
     private static RegisterCustomerCommandHandler CreateSubject(Mock<IUserRepository> repository)
