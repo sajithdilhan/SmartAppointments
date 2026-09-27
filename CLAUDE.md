@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is an in-progress .NET microservices portfolio project (Smart Appointment & Queue Management System). **`README.md` and [`docs/requirements.md`](docs/requirements.md) describe the target/aspirational architecture for the full system — they are not a description of what's currently built.** `docs/requirements.md` is the full BRD/solution-architecture document (functional requirements with FR-IDs, business rules, non-functional requirements, API endpoint drafts, domain events, and the 3-week build plan) — consult it for the intended behavior of a feature before implementing it, but verify against actual code for what already exists. Only these pieces currently have real implementation:
 
 - **Auth service** (`src/Services/Auth/`) — fully wired: JWT auth, registration, login, get-profile.
-- **Availability service** (`src/Services/Availability/`) — scaffolded (Api/Application/Domain layers mirror Auth's structure with a `BranchesController` / `GetBranchesQuery`), but `Availability.Infrastructure` has no persistence wired yet (no DbContext).
+- **Availability service** (`src/Services/Availability/`) — wired the same way as Auth (EF Core + Npgsql persistence, JWT validation of Auth-issued tokens, the same policies and middleware, `/healthz`, Scalar), with `tests/Availability.Tests`. Only branch creation (`POST /api/branches`, admin-only) is real; `GET /api/branches` still returns placeholder data. Progress is tracked in `docs/specs/availability-branches/tasks.md`.
 - **API Gateway** (`src/ApiGateway/SmartAppointments.Gateway/`) — stub only; still the default minimal-API template, no YARP reference or routing config yet.
 - **BuildingBlocks** (`src/Shared/SmartAppointments.BuildingBlocks/`) — much smaller than README implies: just `Constants.cs`, `Enums/Enums.cs`, `Models/Result.cs`, `Models/ApiProblemDetails.cs`. No Messaging/RabbitMQ, Observability/Serilog, or Resilience/Polly code exists yet, despite being named in the constants (e.g. `ApiKeyAuthenticationScheme` is defined but unused).
 
@@ -50,6 +50,20 @@ dotnet user-secrets set "Jwt:SecretKey" "<at least 32 bytes of random text>" --p
 Outside local development both come from the environment (`ConnectionStrings__DefaultConnection`,
 `Jwt__SecretKey`). The optional `Seed:Admin` section (`Email`, `Password`, `FirstName`, `LastName`,
 `PhoneNumber`) also belongs in user-secrets; without all five keys the seeder is inert.
+
+The Availability service follows the same rule with its own database. Its `Jwt:SecretKey` **must be the
+same value as Auth's**, because it validates the tokens Auth signs; `Jwt:Issuer` and `Jwt:Audience` are
+checked in and must also match Auth's:
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=smart_appointment_availability;Username=postgres;Password=<password>" --project src/Services/Availability/Availability.Api
+dotnet user-secrets set "Jwt:SecretKey" "<the same key as Auth>" --project src/Services/Availability/Availability.Api
+dotnet ef database update --project src/Services/Availability/Availability.Infrastructure --startup-project src/Services/Availability/Availability.Api
+```
+
+`Availability.Infrastructure` has an `IDesignTimeDbContextFactory`, so `dotnet ef migrations add` works for
+that service with no secrets set; `database update` reads the connection string from the API project's
+user-secrets or the environment.
 
 There is no `global.json`, so the SDK floats to whatever is installed locally (target framework is `net10.0` across all projects). There is no `docker-compose.yml`, `.editorconfig`, or `Directory.Build.props` at the repo root yet.
 

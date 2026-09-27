@@ -1,6 +1,21 @@
 @Availability.Api_HostAddress = http://localhost:5202
+# An Admin access token from POST /api/Auth/login on the Auth service.
+@AdminToken = <paste token>
 
-GET {{Availability.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+POST {{Availability.Api_HostAddress}}/api/branches
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "code": "PG",
+  "name": "Pettah",
+  "description": "Walk-ins welcome before noon",
+  "address": "12 Main Street, Colombo",
+  "phoneNumber": "+94112345678"
+}
+
+###
+
+GET {{Availability.Api_HostAddress}}/healthz
 
 ###

@@ -21,5 +21,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Auth.Tests/Auth.Tests.csproj" />
+    <Project Path="tests/Availability.Tests/Availability.Tests.csproj" />
   </Folder>
 </Solution>
