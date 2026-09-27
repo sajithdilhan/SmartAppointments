@@ -2,7 +2,7 @@
 
 > Tasks 1–6 deliver Requirement 1 together with the parts of Requirements 5 and 6 that it cannot ship without. Tasks 7–9 are the backlog for Requirements 2–4. Each task leaves the solution building and `dotnet test SmartAppointments.slnx` green.
 >
-> Tasks 1–5 are done. Task 6 is open only for its last step: its unit tests are written and pass (54 cases), but the migration has not yet been applied to a real database and no branch has been created with an Auth-issued token, because no local database credentials were configured when this was built. Everything that does not need the database was checked by hand against the running service: 401 without a token or with a token signed by the wrong key, 403 for Customer and Staff, 400 with every failed rule listed, a 500 that does not leak its message, 503 from `/healthz`, and the Scalar UI.
+> Tasks 1–6 are done. Besides the 54 unit tests, the flow was verified end to end against local PostgreSQL: both migrations applied, the seeded admin logged in to Auth, and that token created a branch through Availability (`201`, with the code trimmed and upper-cased and a blank description stored as null). Posting the same code again returned `409`, and a customer token returned `403`. Before the database was configured, 401 for a missing or wrongly signed token, 400 listing every failed rule, a non-leaking 500 and 503 from `/healthz` were checked by hand.
 
 ## Requirement 1 and the service foundations
 
@@ -39,7 +39,7 @@
   - `ToErrorResult(Error)` in `BranchesController`, identical to Auth's
   - _Requirements: 1.1, 1.3, 1.4, 1.5, 1.6, 6.7_
 
-- [ ] 6. `Availability.Tests`
+- [x] 6. `Availability.Tests`
   - New xUnit + Moq project in `tests/`, added to `SmartAppointments.slnx`
   - `CreateBranchCommandValidatorTests`: every rule at its boundary
   - `CreateBranchCommandHandlerTests`: stage then commit; duplicate pre-check → 409 without writing; the pre-check receives the normalised code; commit-time duplicate → 409 not 500; invalid input → 400 without writing

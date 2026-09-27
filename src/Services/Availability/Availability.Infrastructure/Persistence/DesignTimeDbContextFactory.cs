@@ -7,7 +7,8 @@ namespace Availability.Infrastructure.Persistence;
 /// <summary>
 /// Lets <c>dotnet ef</c> build the context without starting the API host, which refuses to start
 /// without secrets. <c>migrations add</c> never opens a connection, so it works on the placeholder;
-/// <c>database update</c> needs the real connection string from user-secrets or the environment.
+/// <c>database update</c> needs the real connection string from the API project's appsettings,
+/// user-secrets or the environment.
 /// </summary>
 public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<ApplicationDbContext>
 {
@@ -18,7 +19,12 @@ public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<App
 
     public ApplicationDbContext CreateDbContext(string[] args)
     {
+        // dotnet ef runs with the startup project (Availability.Api) as the working directory, so its
+        // appsettings files resolve from there. Later sources override earlier ones, as in the host.
         var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile("appsettings.Development.json", optional: true)
             .AddUserSecrets(ApiUserSecretsId)
             .AddEnvironmentVariables()
             .Build();

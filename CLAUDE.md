@@ -36,34 +36,29 @@ dotnet ef migrations add <Name> --project src/Services/Auth/Auth.Infrastructure 
 dotnet ef database update --project src/Services/Auth/Auth.Infrastructure --startup-project src/Services/Auth/Auth.Api
 ```
 
-### Local secrets
+### Local settings and secrets
 
-`src/Services/Auth/Auth.Api/appsettings.json` deliberately ships `ConnectionStrings:DefaultConnection`
-and `Jwt:SecretKey` as empty strings — they are the two values that must never be committed. The Auth
-service fails at startup with an explanatory message if either is missing, so set them once per machine:
+Each service's `appsettings.json` deliberately ships `ConnectionStrings:DefaultConnection` and
+`Jwt:SecretKey` as empty strings, and the service fails at startup with an explanatory message if either
+is missing. For **local development** both are filled in each service's checked-in
+`appsettings.Development.json`, against a local PostgreSQL (`localhost:5432`, user `postgres`, password
+`password`) with one database per service: `smart_appointment_users` for Auth and
+`smart_appointment_availability` for Availability. These are throwaway local values and are committed on
+purpose.
 
-```powershell
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=smart_appointment_users;Username=postgres;Password=<password>" --project src/Services/Auth/Auth.Api
-dotnet user-secrets set "Jwt:SecretKey" "<at least 32 bytes of random text>" --project src/Services/Auth/Auth.Api
-```
+Every service's `Jwt:SecretKey` **must be the same value as Auth's**, because the other services validate
+the tokens Auth signs; `Jwt:Issuer` and `Jwt:Audience` in `appsettings.json` must match Auth's too. When
+adding a service, copy the key from Auth's `appsettings.Development.json`.
 
 Outside local development both come from the environment (`ConnectionStrings__DefaultConnection`,
-`Jwt__SecretKey`). The optional `Seed:Admin` section (`Email`, `Password`, `FirstName`, `LastName`,
-`PhoneNumber`) also belongs in user-secrets; without all five keys the seeder is inert.
-
-The Availability service follows the same rule with its own database. Its `Jwt:SecretKey` **must be the
-same value as Auth's**, because it validates the tokens Auth signs; `Jwt:Issuer` and `Jwt:Audience` are
-checked in and must also match Auth's:
-
-```powershell
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=smart_appointment_availability;Username=postgres;Password=<password>" --project src/Services/Availability/Availability.Api
-dotnet user-secrets set "Jwt:SecretKey" "<the same key as Auth>" --project src/Services/Availability/Availability.Api
-dotnet ef database update --project src/Services/Availability/Availability.Infrastructure --startup-project src/Services/Availability/Availability.Api
-```
+`Jwt__SecretKey`) and must never be committed. `dotnet user-secrets` still works and overrides the
+development file if a machine needs different values. The optional `Seed:Admin` section (`Email`,
+`Password`, `FirstName`, `LastName`, `PhoneNumber`) for Auth lives in user-secrets; without all five keys
+the seeder is inert.
 
 `Availability.Infrastructure` has an `IDesignTimeDbContextFactory`, so `dotnet ef migrations add` works for
-that service with no secrets set; `database update` reads the connection string from the API project's
-user-secrets or the environment.
+that service with no database; `database update` reads the connection string from the API project's
+appsettings files, user-secrets or the environment.
 
 There is no `global.json`, so the SDK floats to whatever is installed locally (target framework is `net10.0` across all projects). There is no `docker-compose.yml`, `.editorconfig`, or `Directory.Build.props` at the repo root yet.
 
