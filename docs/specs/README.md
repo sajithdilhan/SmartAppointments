@@ -25,7 +25,7 @@ Templates live in [`_templates/`](_templates/).
 | Feature | Status | FR-IDs | Spec |
 |---|---|---|---|
 | Auth identity | Implemented | FR-AUTH-001, FR-AUTH-002, FR-AUTH-003 | [requirements](auth-identity/requirements.md) · [design](auth-identity/design.md) · [tasks](auth-identity/tasks.md) |
-| Availability branches | Partially implemented | FR-AVL-001 | [requirements](availability-branches/requirements.md) · [design](availability-branches/design.md) · [tasks](availability-branches/tasks.md) |
+| Availability branches | Partially implemented (create) | FR-AVL-001 | [requirements](availability-branches/requirements.md) · [design](availability-branches/design.md) · [tasks](availability-branches/tasks.md) |
 
 Features named in `docs/requirements.md` but not yet specced: service types (FR-AVL-002), slot generation and search (FR-AVL-003/004/005), appointment booking (FR-BKG-*), walk-in queue (FR-QUE-*), notifications (FR-NOT-001), reporting (FR-RPT-*).
 

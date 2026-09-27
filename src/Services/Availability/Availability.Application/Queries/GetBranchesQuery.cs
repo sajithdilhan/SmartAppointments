@@ -4,5 +4,5 @@ using SmartAppointments.BuildingBlocks.Models;
 
 namespace Availability.Application.Queries;
 
-public sealed record GetBranchesQuery() : IRequest<Result<List<BranchDto>>>;
+public sealed record GetBranchesQuery() : IRequest<Result<List<BranchResponse>>>;
 

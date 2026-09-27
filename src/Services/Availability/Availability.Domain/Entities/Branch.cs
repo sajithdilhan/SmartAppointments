@@ -1,4 +1,4 @@
-﻿namespace Availability.Domain.Entities;
+namespace Availability.Domain.Entities;
 
 public sealed class Branch
 {
@@ -6,27 +6,49 @@ public sealed class Branch
 
     public Guid Id { get; private set; }
 
+    /// <summary>
+    /// The human-readable key, unique across active and inactive branches. Immutable once
+    /// assigned, because Booking and Queue copy it into their own records and events.
+    /// </summary>
+    public string Code { get; private set; } = default!;
+
     public string Name { get; private set; } = default!;
 
-    public string Description { get; private set; } = default!;
+    public string? Description { get; private set; }
 
     public string Address { get; private set; } = default!;
 
     public string PhoneNumber { get; private set; } = default!;
 
+    public bool IsActive { get; private set; }
+
+    public DateTime CreatedAtUtc { get; private set; }
+
+    public DateTime? UpdatedAtUtc { get; private set; }
+
     public static Branch Create(
+        string code,
         string name,
-        string description,
+        string? description,
         string address,
         string phoneNumber)
     {
         return new Branch
         {
             Id = Guid.CreateVersion7(),
+            Code = NormaliseCode(code),
             Name = name.Trim(),
-            Description = description.Trim(),
+            Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
             Address = address.Trim(),
-            PhoneNumber = phoneNumber.Trim()
+            PhoneNumber = phoneNumber.Trim(),
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow
         };
     }
+
+    /// <summary>
+    /// The one normalisation rule for codes. The duplicate check runs its input through this
+    /// too, so the value looked up and the value stored cannot drift apart.
+    /// </summary>
+    public static string NormaliseCode(string code) => code.Trim().ToUpperInvariant();
 }
