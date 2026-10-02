@@ -80,3 +80,12 @@ Expected failures use `SmartAppointments.BuildingBlocks.Models.Result<T>` (`Resu
 `tests/Auth.Tests` uses xUnit + Moq only (no FluentAssertions, no Testcontainers, no `WebApplicationFactory` yet, despite the README mentioning them as an eventual goal). Tests are pure unit tests: mock `ISender` (or other abstractions) with Moq, construct the controller directly, and assert on the concrete `IActionResult` type (`Assert.IsType<OkObjectResult>(...)`, etc.). To test an `[Authorize]`-decorated action, manually build a `ClaimsPrincipal` / `DefaultHttpContext` / `ControllerContext` and assign it to `controller.ControllerContext` — see `AuthControllerTests.GetProfile_Successful_Returns_Ok` for the pattern. Follow this same style (mock-and-assert-on-ActionResult) for new controller tests rather than introducing integration-style tests unless asked.
 
 When adding a new service, mirror the Auth service's project layout and DI wiring order exactly — the Availability service already does this and is the second reference point if Auth's implementation is more complete/further along on a given concern.
+
+## Working with Claude Code subagents
+
+When delegating work to a subagent (the `Agent` tool), run it on **Sonnet** — pass `model: "sonnet"`
+explicitly on every spawn rather than letting it inherit the parent session's model. Sonnet is the
+project's chosen subagent model because delegated tasks (codebase searches, spec drafting, focused
+refactors) don't need the larger model and run faster and cheaper on it. The intended model is
+**Sonnet 5.5**; the `sonnet` alias resolves to the latest Sonnet release, so it picks up Sonnet 5.5
+without pinning a version-specific model ID.
