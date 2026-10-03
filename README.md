@@ -113,6 +113,26 @@ This system allows customers to book appointments or join a walk-in queue, while
 | Testing | xUnit + Testcontainers |
 | Local Orchestration | Docker Compose, optional .NET Aspire AppHost |
 
+## Run with Docker Compose
+
+Currently running: the gateway, Auth, Availability, Booking and one PostgreSQL (a database per service). Queue, Notification, Reporting, RabbitMQ, Redis and Seq are not part of the compose file yet.
+
+Prerequisite: Docker (Docker Desktop, or Docker Engine with the Compose plugin).
+
+```bash
+cp .env.example .env              # PowerShell: Copy-Item .env.example .env
+docker compose up --build
+```
+
+- The gateway is the only published service: `http://localhost:5290`, with API docs at `http://localhost:5290/scalar`. The services themselves are reachable only inside the Compose network.
+- `.env` holds the secrets and is gitignored. One `JWT_SECRET_KEY` and one `INTERNAL_API_KEY` feed every service. Fill in the `SEED_ADMIN_*` values to create the first admin through `Seed__Admin`; leave them empty and no admin is seeded.
+- Each service applies its EF Core migrations at startup (`Database:MigrateOnStartup`, set only by Compose), and the init scripts in `deploy/postgres/init/` create the databases.
+- After a code change: `docker compose up --build <service>` (for example `booking`).
+- `docker compose down` stops everything and keeps the data; `docker compose down -v` also deletes the database volume and resets it.
+- The Compose PostgreSQL is on host port `5433` (`5432` inside the network), separate from a local PostgreSQL on `5432`. Data created under `dotnet run` is not visible under Compose and vice versa, and `dotnet ef` against the Compose database needs `Port=5433` in the connection string.
+- `GATEWAY_PORT` and `POSTGRES_PORT` in `.env` override the host ports.
+- Known gap: behind Docker's port publishing, every host client may share the gateway's per-address login limit (5 per minute).
+
 ## Core Workflow: Appointment Booking
 
 ```text

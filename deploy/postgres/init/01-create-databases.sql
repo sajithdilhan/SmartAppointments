@@ -1,0 +1,3 @@
+CREATE DATABASE smart_appointment_users;
+CREATE DATABASE smart_appointment_availability;
+CREATE DATABASE smart_appointment_booking;

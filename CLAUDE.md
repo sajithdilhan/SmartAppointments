@@ -28,6 +28,12 @@ dotnet run --project src/Services/Auth/Auth.Api/Auth.Api.csproj
 # Run the gateway (5290; start the three services first, it proxies to them)
 dotnet run --project src/ApiGateway/SmartAppointments.Gateway/SmartAppointments.Gateway.csproj
 
+# Run the whole system in Docker (gateway on http://localhost:5290, /scalar for docs)
+Copy-Item .env.example .env        # once; its throwaway values work as-is
+docker compose up --build
+docker compose up --build booking  # rebuild one service after a code change
+docker compose down                # keeps the data; `down -v` resets the databases
+
 # Run all tests
 dotnet test SmartAppointments.slnx
 
@@ -70,7 +76,9 @@ the seeder is inert.
 that service with no database; `database update` reads the connection string from the API project's
 appsettings files, user-secrets or the environment.
 
-There is no `global.json`, so the SDK floats to whatever is installed locally (target framework is `net10.0` across all projects). There is no `docker-compose.yml`, `.editorconfig`, or `Directory.Build.props` at the repo root yet.
+There is no `global.json`, so the SDK floats to whatever is installed locally (target framework is `net10.0` across all projects). There is no `.editorconfig` or `Directory.Build.props` at the repo root yet. `docker-compose.yml`, `.env.example` and a `Dockerfile` beside each Api project (gateway included) run the whole system; spec: `docs/specs/local-orchestration/`.
+
+Docker Compose reads its secrets from a gitignored `.env` (copy `.env.example`): one `JWT_SECRET_KEY` and one `INTERNAL_API_KEY` feed every service, so they cannot drift. Containers run as Development, with environment variables overriding the `localhost` values from `appsettings.Development.json`. Services apply EF Core migrations at startup only when `Database:MigrateOnStartup` is true (off in every appsettings file; only Compose sets it; `DatabaseMigrator` in each `Infrastructure/Persistence`, which runs before Auth's seeder); `deploy/postgres/init/` creates the databases. The Compose PostgreSQL is on host port `5433` (internal `5432`), separate from a local one on `5432`: data is not shared, and `dotnet ef` against it needs `Port=5433`. Only the gateway is published (`localhost:5290`, `GATEWAY_PORT`). Known gap: behind Docker's port publishing, all host clients may share the gateway's per-address login limit.
 
 ## Architecture conventions (per service)
 

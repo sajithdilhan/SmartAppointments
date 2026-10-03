@@ -29,6 +29,12 @@
     <ProjectReference Include="..\..\src\Services\Auth\Auth.Infrastructure\Auth.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!-- The shipped-settings test reads the API's real configuration files, not copies of them. -->
+  <ItemGroup>
+    <Content Include="..\..\src\Services\Auth\Auth.Api\appsettings.json" Link="ApiSettings\appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\Services\Auth\Auth.Api\appsettings.Development.json" Link="ApiSettings\appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>

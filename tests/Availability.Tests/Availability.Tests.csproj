@@ -30,6 +30,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="..\..\src\Services\Availability\Availability.Api\appsettings.json" Link="ApiSettings\appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\Services\Availability\Availability.Api\appsettings.Development.json" Link="ApiSettings\appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 
