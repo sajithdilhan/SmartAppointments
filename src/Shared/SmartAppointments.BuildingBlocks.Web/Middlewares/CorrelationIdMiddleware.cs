@@ -31,7 +31,7 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next, ILogger<Correl
             return Task.CompletedTask;
         }, (context, id));
 
-        using (logger.BeginScope(new Dictionary<string, object> { ["CorrelationId"] = id }))
+        using (logger.BeginScope("CorrelationId:{CorrelationId}", id))
         {
             await next(context);
         }

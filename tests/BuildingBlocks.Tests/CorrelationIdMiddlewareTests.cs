@@ -178,8 +178,9 @@ public class CorrelationIdMiddlewareTests
             return Task.CompletedTask;
         }, logger).InvokeAsync(context);
 
-        var scope = Assert.IsAssignableFrom<IDictionary<string, object>>(Assert.Single(seenDuringNext!));
-        Assert.Equal("req-1", scope["CorrelationId"]);
+        var scope = Assert.IsAssignableFrom<IReadOnlyList<KeyValuePair<string, object?>>>(Assert.Single(seenDuringNext!));
+        Assert.Contains(scope, p => p.Key == "CorrelationId" && (string?)p.Value == "req-1");
+        Assert.Contains("req-1", scope.ToString());
     }
 
     [Fact]

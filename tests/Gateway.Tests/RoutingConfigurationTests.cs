@@ -96,6 +96,20 @@ public class RoutingConfigurationTests
     }
 
     [Fact]
+    public void Every_Route_Forwards_The_Original_Host_So_Absolute_Urls_Name_The_Gateway()
+    {
+        foreach (var configuration in new IConfiguration[] { Shipped(), Development() })
+        {
+            foreach (var route in configuration.GetSection("ReverseProxy:Routes").GetChildren())
+            {
+                Assert.Contains(
+                    route.GetSection("Transforms").GetChildren(),
+                    t => t["RequestHeaderOriginalHost"] == "true");
+            }
+        }
+    }
+
+    [Fact]
     public void Only_Login_Slot_Search_And_Appointment_Create_Name_A_Rate_Limiter_Policy()
     {
         var limited = Routes(Shipped()).Where(r => r.RateLimiter is not null).ToDictionary(r => r.Name, r => r.RateLimiter);
