@@ -108,6 +108,45 @@ Authorization: Bearer {{AdminToken}}
 
 ###
 
+# ---- Schedules and slots -------------------------------------------------
+
+# IANA time zone; days not listed are closed. Replaces the whole weekly schedule.
+PUT {{Availability.Api_HostAddress}}/api/branches/{{BranchId}}/schedule
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "timeZoneId": "Asia/Colombo",
+  "workingHours": [
+    { "dayOfWeek": "Monday", "opensAt": "09:00", "closesAt": "17:00" },
+    { "dayOfWeek": "Tuesday", "opensAt": "09:00", "closesAt": "17:00" },
+    { "dayOfWeek": "Saturday", "opensAt": "09:00", "closesAt": "12:00" }
+  ]
+}
+
+###
+
+# Slots last the service type's duration. Re-running a range skips slots that already exist.
+POST {{Availability.Api_HostAddress}}/api/slots/generate
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "branchId": "{{BranchId}}",
+  "serviceTypeId": "{{ServiceTypeId}}",
+  "fromDate": "2026-10-05",
+  "toDate": "2026-10-11",
+  "capacity": 2
+}
+
+###
+
+# Any signed-in role. The date is the branch's local date.
+GET {{Availability.Api_HostAddress}}/api/slots/available?branchId={{BranchId}}&serviceId={{ServiceTypeId}}&date=2026-10-05
+Authorization: Bearer {{AdminToken}}
+
+###
+
 GET {{Availability.Api_HostAddress}}/healthz
 
 ###

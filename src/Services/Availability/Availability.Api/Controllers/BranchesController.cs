@@ -92,6 +92,25 @@ public class BranchesController(ISender sender) : ControllerBase
         return Ok(result.Value);
     }
 
+    /// <summary>
+    /// Replaces the branch's time zone and weekly opening hours. Slots that already exist do not change.
+    /// </summary>
+    [HttpPut("{id:guid}/schedule")]
+    [Authorize(Policy = Constants.AdminPolicy)]
+    public async Task<IActionResult> SetSchedule(Guid id, SetBranchScheduleRequest request, CancellationToken cancellationToken)
+    {
+        var command = new SetBranchScheduleCommand(id, request.TimeZoneId, request.WorkingHours);
+
+        var result = await sender.Send(command, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return this.ToActionResult(result.Error!);
+        }
+
+        return Ok(result.Value);
+    }
+
     [HttpPost("{id:guid}/activate")]
     [Authorize(Policy = Constants.AdminPolicy)]
     public Task<IActionResult> Activate(Guid id, CancellationToken cancellationToken) =>

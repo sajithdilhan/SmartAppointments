@@ -27,9 +27,10 @@ Templates live in [`_templates/`](_templates/).
 | Auth identity | Implemented | FR-AUTH-001, FR-AUTH-002, FR-AUTH-003 | [requirements](auth-identity/requirements.md) · [design](auth-identity/design.md) · [tasks](auth-identity/tasks.md) |
 | Availability branches | Implemented | FR-AVL-001 | [requirements](availability-branches/requirements.md) · [design](availability-branches/design.md) · [tasks](availability-branches/tasks.md) |
 | Availability service types | Implemented | FR-AVL-002 | [requirements](availability-service-types/requirements.md) · [design](availability-service-types/design.md) · [tasks](availability-service-types/tasks.md) |
+| Availability slots | Implemented (generate, search) | FR-AVL-003, FR-AVL-004 | [requirements](availability-slots/requirements.md) · [design](availability-slots/design.md) · [tasks](availability-slots/tasks.md) |
 | Shared web infrastructure | Implemented | — (FR-AUTH-003, NFRs) | [requirements](shared-web-infrastructure/requirements.md) · [design](shared-web-infrastructure/design.md) · [tasks](shared-web-infrastructure/tasks.md) |
 
-Features named in `docs/requirements.md` but not yet specced: slot generation and search (FR-AVL-003/004/005), appointment booking (FR-BKG-*), walk-in queue (FR-QUE-*), notifications (FR-NOT-001), reporting (FR-RPT-*).
+Features named in `docs/requirements.md` but not yet specced: slot reserve/release (FR-AVL-005), appointment booking (FR-BKG-*), walk-in queue (FR-QUE-*), notifications (FR-NOT-001), reporting (FR-RPT-*).
 
 ## Retro-fitted specs
 

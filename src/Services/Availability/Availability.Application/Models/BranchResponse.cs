@@ -11,7 +11,9 @@ public sealed record BranchResponse(
     string PhoneNumber,
     bool IsActive,
     DateTime CreatedAtUtc,
-    DateTime? UpdatedAtUtc)
+    DateTime? UpdatedAtUtc,
+    string? TimeZoneId,
+    IReadOnlyList<WorkingHoursResponse> WorkingHours)
 {
     public static BranchResponse From(Branch branch) => new(
         branch.Id,
@@ -22,5 +24,10 @@ public sealed record BranchResponse(
         branch.PhoneNumber,
         branch.IsActive,
         branch.CreatedAtUtc,
-        branch.UpdatedAtUtc);
+        branch.UpdatedAtUtc,
+        branch.TimeZoneId,
+        branch.WorkingHours
+            .OrderBy(w => Availability.Domain.Entities.WorkingHours.MondayFirstOrder(w.DayOfWeek))
+            .Select(w => new WorkingHoursResponse(w.DayOfWeek, w.OpensAt, w.ClosesAt))
+            .ToList());
 }

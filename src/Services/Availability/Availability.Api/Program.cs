@@ -1,6 +1,7 @@
 using Availability.Application.Dependency;
 using Availability.Infrastructure.Dependency;
 using Scalar.AspNetCore;
+using System.Text.Json.Serialization;
 using SmartAppointments.BuildingBlocks.Web.Authentication;
 using SmartAppointments.BuildingBlocks.Web.Middlewares;
 using SmartAppointments.BuildingBlocks.Web.OpenApi;
@@ -11,7 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddControllers();
+// DayOfWeek travels as "Monday" rather than 1.
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApiWithBearerAuth();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddAuthorizationWithRoles();
