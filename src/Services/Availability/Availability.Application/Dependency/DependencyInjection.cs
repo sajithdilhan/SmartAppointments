@@ -25,6 +25,7 @@ public static class DependencyInjection
     {
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
         services.AddScoped<IValidator<CreateBranchCommand>, CreateBranchCommandValidator>();
+        services.AddScoped<IValidator<UpdateBranchCommand>, UpdateBranchCommandValidator>();
 
         services.AddOpenApi(options =>
         {

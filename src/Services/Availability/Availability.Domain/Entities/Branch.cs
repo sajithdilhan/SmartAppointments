@@ -47,6 +47,44 @@ public sealed class Branch
     }
 
     /// <summary>
+    /// Replaces the editable details with the same trimming as <see cref="Create"/>. The code is
+    /// deliberately not a parameter, and <see cref="IsActive"/> is left alone: activation has its
+    /// own operations.
+    /// </summary>
+    public void UpdateDetails(string name, string? description, string address, string phoneNumber)
+    {
+        Name = name.Trim();
+        Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+        Address = address.Trim();
+        PhoneNumber = phoneNumber.Trim();
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Returns false, and changes nothing, when the branch is already active, so the caller can
+    /// skip the write.
+    /// </summary>
+    public bool Activate() => SetActive(true);
+
+    /// <summary>
+    /// Returns false, and changes nothing, when the branch is already inactive, so the caller can
+    /// skip the write.
+    /// </summary>
+    public bool Deactivate() => SetActive(false);
+
+    private bool SetActive(bool isActive)
+    {
+        if (IsActive == isActive)
+        {
+            return false;
+        }
+
+        IsActive = isActive;
+        UpdatedAtUtc = DateTime.UtcNow;
+        return true;
+    }
+
+    /// <summary>
     /// The one normalisation rule for codes. The duplicate check runs its input through this
     /// too, so the value looked up and the value stored cannot drift apart.
     /// </summary>

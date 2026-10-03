@@ -8,7 +8,7 @@ A branch is a physical location where customers are served. The Availability ser
 
 This spec covers creating, updating, activating and deactivating a branch, and reading the branch list. It also covers the service foundations the first real Availability endpoint needs: persistence, validation of the JWTs that Auth issues, secret handling, and health checks. Those foundations are included here rather than in a separate spec because this feature is the first to need them and cannot ship without them. The spec refines sections 6, 8 (Availability Management), 9, 12 and 13 of [`docs/requirements.md`](../../requirements.md) and covers `FR-AVL-001`.
 
-Requirement 1 is built, together with Requirements 5 and 6. The exception is 5.5, which has no caller until the read endpoints exist. Requirements 2–4 are not built yet. [`tasks.md`](tasks.md) tracks which is which.
+All six requirements are built. [`tasks.md`](tasks.md) records how each was verified.
 
 ## Requirements
 
@@ -128,8 +128,8 @@ These describe the scaffold as it stood in `src/Services/Availability/` before t
 
 1. **Secrets are committed.** ~~In the working tree~~ closed by task 1: `appsettings.json` now carries empty placeholders. **Still open operationally:** the signing key that was committed here is the same one commit `335a6cb` removed from Auth. It remains in the history of both services and must be rotated in every environment that uses it.
 2. ~~**The only endpoint cannot run.**~~ Closed by task 4. `Program.cs` now composes the layers in Auth's order.
-3. **The handler returns placeholder data.** `GetBranchesHandler` builds two hard-coded branches with fresh GUIDs on every call, and `GET /api/Branches` is still anonymous. Open until task 9.
-4. ~~**The model is incomplete.**~~ Closed for creation by task 2. `BranchResponse` replaces `BranchDto`. The update and activation behaviours arrive with tasks 7 and 8.
+3. ~~**The handler returns placeholder data.**~~ Closed by task 9. `GetBranchesHandler` reads the repository and `GET /api/Branches` requires `AllowedOriginsPolicy`.
+4. ~~**The model is incomplete.**~~ Closed by tasks 2, 7 and 8. `BranchResponse` replaces `BranchDto`.
 5. ~~**No security or plumbing.**~~ Closed by tasks 3 and 4.
 6. ~~**No tests.**~~ Closed by task 6's unit tests.
 7. ~~**The `.http` file is the template's.**~~ Closed by task 4.
