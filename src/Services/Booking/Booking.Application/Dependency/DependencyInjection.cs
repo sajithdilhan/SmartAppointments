@@ -1,3 +1,5 @@
+using Booking.Application.Commands;
+using Booking.Application.Validations;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,7 +14,7 @@ public static class DependencyInjection
         // Handlers take the clock from here so tests can pin "now".
         services.AddSingleton(TimeProvider.System);
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
-        // One validator per command is registered here as the commands arrive.
+        services.AddScoped<IValidator<CreateAppointmentCommand>, CreateAppointmentCommandValidator>();
         return services;
     }
 }

@@ -1,0 +1,48 @@
+@Booking.Api_HostAddress = http://localhost:5310
+# A Customer access token from POST /api/Auth/login on the Auth service.
+@CustomerToken = <paste token>
+# A Staff or Admin token, for viewing or (Admin only) cancelling someone else's appointment.
+@AdminToken = <paste token>
+# An id from GET /api/slots/available on the Availability service.
+@SlotId = <paste id>
+# The id from the Location header or body of the create response.
+@AppointmentId = <paste id>
+
+# Repeat this request with the same Idempotency-Key and body: the same 201 comes back, no second booking.
+# The same key with another slotId is a 422. A new key for a new attempt.
+POST {{Booking.Api_HostAddress}}/api/appointments
+Authorization: Bearer {{CustomerToken}}
+Idempotency-Key: 6d1c7a52-0b1f-4f3c-9a43-2f7d6a3e8c10
+Content-Type: application/json
+
+{
+  "slotId": "{{SlotId}}"
+}
+
+###
+
+# Without the header: 400.
+POST {{Booking.Api_HostAddress}}/api/appointments
+Authorization: Bearer {{CustomerToken}}
+Content-Type: application/json
+
+{
+  "slotId": "{{SlotId}}"
+}
+
+###
+
+# The owner, or any Staff/Admin; anyone else gets 404.
+GET {{Booking.Api_HostAddress}}/api/appointments/{{AppointmentId}}
+Authorization: Bearer {{CustomerToken}}
+
+###
+
+# The owner or an Admin. 204 on success and when repeated; 409 once the appointment has started.
+POST {{Booking.Api_HostAddress}}/api/appointments/{{AppointmentId}}/cancel
+Authorization: Bearer {{CustomerToken}}
+
+###
+
+POST {{Booking.Api_HostAddress}}/api/appointments/{{AppointmentId}}/cancel
+Authorization: Bearer {{AdminToken}}

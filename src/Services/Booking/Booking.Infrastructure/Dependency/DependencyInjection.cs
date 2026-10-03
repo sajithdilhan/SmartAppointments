@@ -1,4 +1,5 @@
 using Booking.Application.Abstractions;
+using Booking.Infrastructure.Clients;
 using Booking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -20,6 +21,8 @@ public static class DependencyInjection
                 "'dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"<connection string>\"' " +
                 "for local development, or through the environment in every other environment.");
         }
+
+        services.AddAvailabilityClient(configuration);
 
         services.AddScoped<IAppointmentRepository, AppointmentRepository>();
         services.AddScoped<IIdempotencyRepository, IdempotencyRepository>();

@@ -53,23 +53,23 @@
 
 ## Chunk D — Booking: Availability client, create, get, cancel
 
-- [ ] 9. Availability client
+- [x] 9. Availability client
   - `SlotInfo`, `IAvailabilityClient`; `AvailabilityClient` with the status mapping of the design; `AddHttpClient<...>().AddStandardResilienceHandler(...)` with the 5 s attempt and 20 s total timeouts, the comment that retrying POST is safe only because reserve and release are idempotent; fail-fast validation of `Services:Availability:BaseUrl` and `InternalApi:Key`
   - `AvailabilityClientTests` with a fake `HttpMessageHandler`: statuses, the `X-API-Key` header, network failure, timeout and `401` → `503`
   - _Requirements: 9.1–9.6_
 
-- [ ] 10. Create appointment
+- [x] 10. Create appointment
   - `CreateAppointmentRequest`, `AppointmentResponse`, `CreateAppointmentCommand`, validator, `CreateAppointmentCommandHandler` (claim, slot read, overlap pre-check, reserve, `TryAddBookedAsync`, outcome storage, compensation and claim removal)
   - The handler tracks `reserveAttempted`: a failure before the reserve call removes the claim; a `503`, a lost response or a failed save after a reserve call leaves the claim in progress (after a best-effort release) and stores nothing; an `Overlap` from `TryAddBookedAsync` releases the reservation and returns a stored `409`, or `503` with the claim left in progress if that release fails
   - `CreateAppointmentCommandValidatorTests` (key at 128 and 129 characters, blank, missing) and `CreateAppointmentCommandHandlerTests` as listed in the design, including: claim removed on a pre-reserve `503`; claim not removed and nothing stored on a reserve-time `503`; a retry whose claim carries an earlier appointment id reserves with that id; `Overlap` path releases and answers `409` (the advisory lock itself is SQL and is verified in task 13)
   - _Requirements: 5.1–5.9, 5.11, 6.1–6.10_
 
-- [ ] 11. Get and cancel
+- [x] 11. Get and cancel
   - `GetAppointmentQuery`/handler and `CancelAppointmentCommand`/handler with ownership and role rules, the identical `404`, the repeat cancel that re-releases, the `503` on release failure
   - `GetAppointmentHandlerTests`, `CancelAppointmentHandlerTests`
   - _Requirements: 7.1–7.3, 8.1–8.6_
 
-- [ ] 12. `AppointmentsController`
+- [x] 12. `AppointmentsController`
   - `POST /api/appointments` (`CustomerPolicy`, `Idempotency-Key` header, `CreatedAtAction`), `GET /api/appointments/{id}` and `POST /api/appointments/{id}/cancel` (`AllowedOriginsPolicy`); caller id from `sub`, role from `role`; failures through `this.ToActionResult`
   - `AppointmentsControllerTests`: `201` with `Location`, status mapping including `422` and `503`, missing `sub` → `401`, policies by reflection
   - `Booking.Api.http` with the requests
