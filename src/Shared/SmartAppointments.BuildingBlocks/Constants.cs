@@ -18,4 +18,5 @@ public static class Constants
     public const string InternalServicePolicy = "InternalServicePolicy";
     public const string ApiKeyAuthenticationScheme = "ApiKeyScheme";
     public const string ApiKeyHeaderName = "X-API-Key";
+    public const string CorrelationIdHeaderName = "X-Correlation-ID";
 }

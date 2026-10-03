@@ -30,6 +30,7 @@ Templates live in [`_templates/`](_templates/).
 | Availability slots | Implemented (generate, search) | FR-AVL-003, FR-AVL-004 | [requirements](availability-slots/requirements.md) · [design](availability-slots/design.md) · [tasks](availability-slots/tasks.md) |
 | Booking appointments | Implemented | FR-AVL-005, FR-BKG-001, FR-BKG-002, FR-BKG-005 | [requirements](booking-appointments/requirements.md) · [design](booking-appointments/design.md) · [tasks](booking-appointments/tasks.md) |
 | Shared web infrastructure | Implemented | — (FR-AUTH-003, NFRs) | [requirements](shared-web-infrastructure/requirements.md) · [design](shared-web-infrastructure/design.md) · [tasks](shared-web-infrastructure/tasks.md) |
+| API gateway | Implemented | — (refines BRD gateway row, 11.5 rate limiting, correlation-ID NFR) | [requirements](api-gateway/requirements.md) · [design](api-gateway/design.md) · [tasks](api-gateway/tasks.md) |
 
 Features named in `docs/requirements.md` but not yet specced: the rest of appointment booking (FR-BKG-003, FR-BKG-004, FR-BKG-006), walk-in queue (FR-QUE-*), notifications (FR-NOT-001), reporting (FR-RPT-*).
 

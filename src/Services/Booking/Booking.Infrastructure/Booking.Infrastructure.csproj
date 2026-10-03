@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Booking.Application\Booking.Application.csproj" />
+    <ProjectReference Include="..\..\..\Shared\SmartAppointments.BuildingBlocks.Web\SmartAppointments.BuildingBlocks.Web.csproj" />
   </ItemGroup>
 
 </Project>

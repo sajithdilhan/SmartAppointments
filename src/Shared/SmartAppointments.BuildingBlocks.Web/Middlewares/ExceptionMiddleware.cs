@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using SmartAppointments.BuildingBlocks.Models;
-using System.Text.Json;
+using SmartAppointments.BuildingBlocks.Web.Results;
 
 namespace SmartAppointments.BuildingBlocks.Web.Middlewares;
 
@@ -38,7 +38,7 @@ public sealed class ExceptionMiddleware
         }
     }
 
-    private static async Task HandleExceptionAsync(HttpContext context, Exception ex)
+    private static Task HandleExceptionAsync(HttpContext context, Exception ex)
     {
         var problem = ex switch
         {
@@ -47,9 +47,6 @@ public sealed class ExceptionMiddleware
             _ => new ApiProblemDetails(StatusCodes.Status500InternalServerError, UnexpectedErrorMessage)
         };
 
-        context.Response.StatusCode = problem.Status;
-        context.Response.ContentType = "application/problem+json";
-
-        await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
+        return ProblemDetailsWriter.WriteAsync(context, problem);
     }
 }

@@ -197,6 +197,36 @@ public class AvailabilityClientTests
         Assert.Equal("a-very-long-internal-api-key-for-tests-0123456789", sentKey);
     }
 
+    [Fact]
+    public async Task The_Registered_Client_Forwards_The_Correlation_Id_Of_The_Current_Request()
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Services:Availability:BaseUrl"] = "http://availability.test",
+            ["InternalApi:Key"] = "a-very-long-internal-api-key-for-tests-0123456789"
+        }).Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddAvailabilityClient(configuration);
+        string? sentId = null;
+        services.AddHttpClient<Booking.Application.Abstractions.IAvailabilityClient, AvailabilityClient>()
+            .ConfigurePrimaryHttpMessageHandler(() => new FakeHandler(request =>
+            {
+                sentId = request.Headers.GetValues("X-Correlation-ID").Single();
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+            }));
+        using var provider = services.BuildServiceProvider();
+        var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        httpContext.Items[SmartAppointments.BuildingBlocks.Web.Middlewares.CorrelationIdMiddleware.ItemKey] = "req-42";
+        provider.GetRequiredService<Microsoft.AspNetCore.Http.IHttpContextAccessor>().HttpContext = httpContext;
+
+        var client = provider.GetRequiredService<Booking.Application.Abstractions.IAvailabilityClient>();
+        var result = await client.ReleaseAsync(SlotId, AppointmentId, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("req-42", sentId);
+    }
+
     [Theory]
     [InlineData(null, "key")]
     [InlineData("", "key")]
