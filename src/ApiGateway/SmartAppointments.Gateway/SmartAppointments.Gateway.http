@@ -1,0 +1,201 @@
+@Gateway_HostAddress = http://localhost:5290
+# Tokens come from the login requests below (the "accessToken" of the response).
+@AdminToken = <paste token>
+@CustomerToken = <paste token>
+@BranchId = <paste id>
+@ServiceTypeId = <paste id>
+@SlotId = <paste id>
+@AppointmentId = <paste id>
+
+# Everything goes through the gateway; the services' own ports are not used here.
+
+# ---- Anonymous routes (rate-limited: the 6th login within a minute from one address is 429) -----
+
+POST {{Gateway_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "firstName": "Nimal",
+  "lastName": "Perera",
+  "email": "nimal@example.com",
+  "phoneNumber": "+94771234567",
+  "password": "Passw0rd!Passw0rd"
+}
+
+###
+
+POST {{Gateway_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "nimal@example.com",
+  "password": "Passw0rd!Passw0rd"
+}
+
+###
+
+# ---- Correlation id ----------------------------------------------------------------------------
+
+# A good value is echoed once on the response; a malformed one (a space, over 64 characters) is replaced.
+GET {{Gateway_HostAddress}}/api/branches
+Authorization: Bearer {{CustomerToken}}
+X-Correlation-ID: e2e-check-001
+
+###
+
+GET {{Gateway_HostAddress}}/api/branches
+Authorization: Bearer {{CustomerToken}}
+X-Correlation-ID: bad value!
+
+###
+
+# ---- Branches, service types, slots (Admin writes; any signed-in role reads) ---------------------
+
+POST {{Gateway_HostAddress}}/api/branches
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "code": "PG",
+  "name": "Pettah",
+  "description": "Walk-ins welcome before noon",
+  "address": "12 Main Street, Colombo",
+  "phoneNumber": "+94112345678"
+}
+
+###
+
+PUT {{Gateway_HostAddress}}/api/branches/{{BranchId}}/schedule
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "timeZoneId": "Asia/Colombo",
+  "workingHours": [
+    { "dayOfWeek": "Monday", "opensAt": "09:00", "closesAt": "17:00" },
+    { "dayOfWeek": "Tuesday", "opensAt": "09:00", "closesAt": "17:00" },
+    { "dayOfWeek": "Saturday", "opensAt": "09:00", "closesAt": "12:00" }
+  ]
+}
+
+###
+
+POST {{Gateway_HostAddress}}/api/services
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "code": "VEHICLE_INSPECTION",
+  "name": "Vehicle inspection",
+  "description": "Bring the vehicle logbook",
+  "durationMinutes": 30
+}
+
+###
+
+POST {{Gateway_HostAddress}}/api/slots/generate
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "branchId": "{{BranchId}}",
+  "serviceTypeId": "{{ServiceTypeId}}",
+  "fromDate": "2026-10-05",
+  "toDate": "2026-10-11",
+  "capacity": 2
+}
+
+###
+
+# Rate-limited per user: the 31st search within a minute is 429.
+GET {{Gateway_HostAddress}}/api/slots/available?branchId={{BranchId}}&serviceId={{ServiceTypeId}}&date=2026-10-05
+Authorization: Bearer {{CustomerToken}}
+
+###
+
+# A customer on an admin-only route: the 403 is the service's, passed through.
+POST {{Gateway_HostAddress}}/api/branches
+Authorization: Bearer {{CustomerToken}}
+Content-Type: application/json
+
+{
+  "code": "XX",
+  "name": "Nope",
+  "description": "",
+  "address": "-",
+  "phoneNumber": "+94112345678"
+}
+
+###
+
+# ---- Appointments (rate-limited per user: the 11th create within a minute is 429; use a new key each time) ----
+
+POST {{Gateway_HostAddress}}/api/appointments
+Authorization: Bearer {{CustomerToken}}
+Idempotency-Key: 6d1c7a52-0b1f-4f3c-9a43-2f7d6a3e8c10
+Content-Type: application/json
+
+{
+  "slotId": "{{SlotId}}"
+}
+
+###
+
+GET {{Gateway_HostAddress}}/api/appointments/{{AppointmentId}}
+Authorization: Bearer {{CustomerToken}}
+
+###
+
+POST {{Gateway_HostAddress}}/api/appointments/{{AppointmentId}}/cancel
+Authorization: Bearer {{CustomerToken}}
+
+###
+
+# ---- Edge authentication: the gateway answers 401 with WWW-Authenticate: Bearer, no service is called ----
+
+GET {{Gateway_HostAddress}}/api/branches
+
+###
+
+GET {{Gateway_HostAddress}}/api/branches
+Authorization: Bearer {{CustomerToken}}tampered
+
+###
+
+# ---- Not routed: 404 from the gateway, no token needed -------------------------------------------
+
+GET {{Gateway_HostAddress}}/internal/slots/{{SlotId}}
+
+###
+
+GET {{Gateway_HostAddress}}/openapi/v1.json
+
+###
+
+GET {{Gateway_HostAddress}}/api/queue/x
+
+###
+
+# ---- Aggregated health: 200 Healthy; 200 Degraded naming a service that is down (answers in ~2 s) ----
+
+GET {{Gateway_HostAddress}}/healthz
+
+###
+
+# ---- Development only: aggregated API docs (anonymous). /scalar is the UI; each document's servers is the gateway ----
+
+GET {{Gateway_HostAddress}}/scalar/
+
+###
+
+GET {{Gateway_HostAddress}}/openapi/auth/v1.json
+
+###
+
+GET {{Gateway_HostAddress}}/openapi/availability/v1.json
+
+###
+
+GET {{Gateway_HostAddress}}/openapi/booking/v1.json
+
+###
