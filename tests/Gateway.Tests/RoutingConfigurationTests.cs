@@ -96,9 +96,14 @@ public class RoutingConfigurationTests
     }
 
     [Fact]
-    public void No_Route_Names_A_Rate_Limiter_Policy_Yet()
+    public void Only_Login_Slot_Search_And_Appointment_Create_Name_A_Rate_Limiter_Policy()
     {
-        Assert.All(Routes(Shipped()), r => Assert.Null(r.RateLimiter));
+        var limited = Routes(Shipped()).Where(r => r.RateLimiter is not null).ToDictionary(r => r.Name, r => r.RateLimiter);
+
+        Assert.Equal(3, limited.Count);
+        Assert.Equal("login", limited["auth-login"]);
+        Assert.Equal("appointment-create", limited["appointments-create"]);
+        Assert.Equal("slot-search", limited["slots-search"]);
     }
 
     [Fact]

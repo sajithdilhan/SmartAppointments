@@ -63,7 +63,7 @@
 
 ## Chunk C — Rate limiting
 
-- [ ] 8. Limiter policies and rejection
+- [x] 8. Limiter policies and rejection
   - `RateLimiting/RateLimitPolicies` (constants, `ByClientIp`, `ByUser`, `AddGatewayRateLimiting`: three named sliding-window policies of 1 minute and 6 segments, `QueueLimit = 0`, `OnRejected` with `429`, `Retry-After`, `ProblemDetailsWriter` body and a `Warning` log of the policy name only); no global limiter
   - `Program.cs`: `AddGatewayRateLimiting()` and `UseRateLimiter()` after `UseAuthorization()`
   - `appsettings.json`: `RateLimiterPolicy` of `login`, `appointment-create` and `slot-search` on `auth-login`, `appointments-create` and `slots-search`
@@ -72,7 +72,7 @@
 
 ## Chunk D — Aggregated health
 
-- [ ] 9. Downstream health checks and `/healthz`
+- [x] 9. Downstream health checks and `/healthz`
   - `Health/DownstreamHealthCheck` (2 s timeout, non-2xx, timeout and unreachable → `context.Registration.FailureStatus`, descriptions "HTTP n", "timed out", "unreachable"), `AddGatewayHealthChecks(configuration)` (the `gateway` check plus `auth`, `availability`, `booking` with `failureStatus: Degraded`, addresses read from the cluster configuration, a `"health"` named `HttpClient` with a 2 s timeout), `Health/HealthResponseWriter`
   - `Program.cs`: `MapHealthChecks("/healthz", ...)` with `ResultStatusCodes` 200/200/503, the writer, and `.AllowAnonymous()`
   - `DownstreamHealthCheckTests` with a fake `HttpMessageHandler`, `HealthEndpointTests` (aggregate status, status-code mapping, JSON shape, timing)

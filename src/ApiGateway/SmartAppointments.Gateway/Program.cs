@@ -3,6 +3,8 @@ using SmartAppointments.BuildingBlocks.Web.Authentication;
 using SmartAppointments.BuildingBlocks.Web.Middlewares;
 using SmartAppointments.Gateway.Configuration;
 using SmartAppointments.Gateway.Docs;
+using SmartAppointments.Gateway.Health;
+using SmartAppointments.Gateway.RateLimiting;
 using SmartAppointments.Gateway.Proxy;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,8 +17,11 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 // stay with the services. The fallback makes a route that forgets its policy safe: it needs a user.
 builder.Services.AddAuthorizationBuilder()
     .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+builder.Services.AddGatewayRateLimiting();
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+
+builder.Services.AddGatewayHealthChecks(builder.Configuration);
 
 var app = builder.Build();
 
@@ -29,6 +34,10 @@ app.UseHttpsRedirection();
 app.UseMiddleware<UnmatchedRequestMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
+// After authentication, so the validated `sub` is available to the per-user partitions.
+app.UseRateLimiter();
+
+app.MapHealthChecks("/healthz", HealthExtensions.GatewayHealthOptions()).AllowAnonymous();
 
 if (app.Environment.IsDevelopment())
 {
