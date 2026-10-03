@@ -15,6 +15,7 @@ public static class Constants
     public const string StaffPolicy = "StaffPolicy";
     public const string AdminOrStaffPolicy = "AdminOrStaffPolicy";
     public const string AllowedOriginsPolicy = "AllowedOriginsPolicy";
+    public const string InternalServicePolicy = "InternalServicePolicy";
     public const string ApiKeyAuthenticationScheme = "ApiKeyScheme";
     public const string ApiKeyHeaderName = "X-API-Key";
 }

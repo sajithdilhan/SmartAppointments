@@ -4,29 +4,29 @@
 
 ## Chunk A — Shared API-key authentication
 
-- [ ] 1. API-key scheme in `BuildingBlocks.Web`
+- [x] 1. API-key scheme in `BuildingBlocks.Web`
   - `Constants.InternalServicePolicy`; `ApiKeyAuthenticationOptions`, `ApiKeyAuthenticationHandler` (constant-time compare via SHA-256 digests and `FixedTimeEquals`, principal with no role claims), `AddApiKeyAuthentication(configuration)` (fail-fast on a missing, blank or under-32-byte `InternalApi:Key`; default schemes untouched; policy accepts only the API-key scheme)
   - `ApiKeyAuthenticationTests` in `tests/BuildingBlocks.Tests`: missing/wrong/equal/different-length key, principal has no roles, startup failures, policy scheme
   - _Requirements: 1.1–1.8_
 
-- [ ] 2. Map `422` and `503` in `ToActionResult`
+- [x] 2. Map `422` and `503` in `ToActionResult`
   - `422` → `UnprocessableEntity(error)`, `503` → `StatusCode(503, error)`; additions to `ErrorResultExtensionsTests`
   - _Requirements: 10.6_
 
 ## Chunk B — Availability: get, reserve, release
 
-- [ ] 3. `SlotReservation` and persistence
+- [x] 3. `SlotReservation` and persistence
   - `SlotReservation` entity and `SlotReservationTests`; fix the `Slot.ReservedCount` comment; `SlotReservations` table (composite key, FK to `Slots`, `Restrict`); the two `Slots` check constraints
   - `ISlotRepository.GetByIdAsync`; `ISlotReservationRepository` with `ReserveOutcome` and `ReleaseOutcome`; `SlotReservationRepository` (insert `ON CONFLICT DO NOTHING` then conditional `ExecuteUpdateAsync` in one transaction; delete then conditional decrement in one transaction); register it in `AddInfrastructure`
   - Migration `AddSlotReservations` (`dotnet ef migrations add AddSlotReservations --project src/Services/Availability/Availability.Infrastructure --startup-project src/Services/Availability/Availability.Api`)
   - _Requirements: 3.2, 3.3, 3.7, 4.1, 4.2, 4.5_
 
-- [ ] 4. Get, reserve and release handlers
+- [x] 4. Get, reserve and release handlers
   - `GetInternalSlotQuery`, `ReserveSlotCommand`, `ReleaseSlotCommand`, handlers, validators (registered in `AddApplication`), `InternalSlotResponse`, `SlotReservationRequest`, new `SlotErrors` (started, full)
   - Handler and validator tests (all 404/409 paths, the repeat reserve that skips state checks, release without state checks, `TimeProvider` pinned with `FixedTimeProvider`)
   - _Requirements: 2.1–2.3, 3.1, 3.3–3.6, 3.8, 4.1–4.4_
 
-- [ ] 5. `InternalSlotsController` and wiring
+- [x] 5. `InternalSlotsController` and wiring
   - `GET /internal/slots/{id}`, `POST .../reserve`, `POST .../release` under `InternalServicePolicy`; `AddApiKeyAuthentication` in `Availability.Api/Program.cs`; `InternalApi:Key` empty in `appsettings.json`, a throwaway 32+ character value in `appsettings.Development.json`
   - `InternalSlotsControllerTests` (status mapping, class-level policy by reflection); requests added to `Availability.Api.http` using `X-API-Key`
   - _Requirements: 1.1–1.8, 2, 3, 4_

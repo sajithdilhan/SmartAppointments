@@ -4,6 +4,12 @@ namespace Availability.Application.Handlers;
 
 internal static class SlotErrors
 {
+    public static Error NotFound(Guid id) => new(404, $"Slot '{id}' was not found.");
+
+    public static Error AlreadyStarted() => new(409, "Slot has already started.");
+
+    public static Error Full() => new(409, "Slot is full.");
+
     public static Error BranchInactive(string code) => new(409, $"Branch '{code}' is inactive.");
 
     public static Error ServiceTypeInactive(string code) => new(409, $"Service type '{code}' is inactive.");

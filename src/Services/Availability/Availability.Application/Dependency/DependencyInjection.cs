@@ -22,6 +22,8 @@ public static class DependencyInjection
         services.AddScoped<IValidator<SetBranchScheduleCommand>, SetBranchScheduleCommandValidator>();
         services.AddScoped<IValidator<GenerateSlotsCommand>, GenerateSlotsCommandValidator>();
         services.AddScoped<IValidator<SearchAvailableSlotsQuery>, SearchAvailableSlotsQueryValidator>();
+        services.AddScoped<IValidator<ReserveSlotCommand>, ReserveSlotCommandValidator>();
+        services.AddScoped<IValidator<ReleaseSlotCommand>, ReleaseSlotCommandValidator>();
         return services;
     }
 }

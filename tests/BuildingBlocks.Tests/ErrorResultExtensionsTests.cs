@@ -12,6 +12,8 @@ public class ErrorResultExtensionsTests
     [InlineData(403, typeof(ObjectResult), 403)]
     [InlineData(404, typeof(NotFoundObjectResult), 404)]
     [InlineData(409, typeof(ConflictObjectResult), 409)]
+    [InlineData(422, typeof(UnprocessableEntityObjectResult), 422)]
+    [InlineData(503, typeof(ObjectResult), 503)]
     [InlineData(418, typeof(ObjectResult), 500)]
     [InlineData(500, typeof(ObjectResult), 500)]
     public void Each_Status_Maps_To_Its_Result(int status, Type expectedType, int expectedStatus)
