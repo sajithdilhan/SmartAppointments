@@ -1,6 +1,8 @@
 @Availability.Api_HostAddress = http://localhost:5202
 # An Admin access token from POST /api/Auth/login on the Auth service.
 @AdminToken = <paste token>
+# The id from the Location header or body of the create response.
+@BranchId = <paste id>
 
 POST {{Availability.Api_HostAddress}}/api/branches
 Authorization: Bearer {{AdminToken}}
@@ -13,6 +15,46 @@ Content-Type: application/json
   "address": "12 Main Street, Colombo",
   "phoneNumber": "+94112345678"
 }
+
+###
+
+GET {{Availability.Api_HostAddress}}/api/branches
+Authorization: Bearer {{AdminToken}}
+
+###
+
+# Inactive branches are included only for an admin.
+GET {{Availability.Api_HostAddress}}/api/branches?includeInactive=true
+Authorization: Bearer {{AdminToken}}
+
+###
+
+GET {{Availability.Api_HostAddress}}/api/branches/{{BranchId}}
+Authorization: Bearer {{AdminToken}}
+
+###
+
+# The code cannot be changed, so it is not part of the body.
+PUT {{Availability.Api_HostAddress}}/api/branches/{{BranchId}}
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "name": "Pettah",
+  "description": "Walk-ins welcome all day",
+  "address": "14 Main Street, Colombo",
+  "phoneNumber": "+94112345678"
+}
+
+###
+
+POST {{Availability.Api_HostAddress}}/api/branches/{{BranchId}}/deactivate
+Authorization: Bearer {{AdminToken}}
+
+###
+
+POST {{Availability.Api_HostAddress}}/api/branches/{{BranchId}}/activate
+Authorization: Bearer {{AdminToken}}
 
 ###
 

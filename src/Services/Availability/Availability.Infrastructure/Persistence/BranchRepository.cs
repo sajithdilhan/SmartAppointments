@@ -17,6 +17,27 @@ public class BranchRepository(ApplicationDbContext context) : IBranchRepository
         return context.Branches.AsNoTracking().AnyAsync(b => b.Code == normalisedCode, cancellationToken);
     }
 
+    public Task<Branch?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return context.Branches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
+    }
+
+    public Task<Branch?> GetForUpdateByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return context.Branches.FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
+    }
+
+    public Task<List<Branch>> ListAsync(bool includeInactive, CancellationToken cancellationToken)
+    {
+        var branches = context.Branches.AsNoTracking();
+        if (!includeInactive)
+        {
+            branches = branches.Where(b => b.IsActive);
+        }
+
+        return branches.OrderBy(b => b.Name).ThenBy(b => b.Code).ToListAsync(cancellationToken);
+    }
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         try

@@ -17,6 +17,24 @@ public interface IBranchRepository
     Task<bool> ExistsByCodeAsync(string normalisedCode, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Read-only lookup, active or inactive. Deciding whether the caller may see an inactive
+    /// branch is the handler's job.
+    /// </summary>
+    Task<Branch?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Tracked lookup for a branch the caller is about to change and commit with
+    /// <see cref="SaveChangesAsync"/>.
+    /// </summary>
+    Task<Branch?> GetForUpdateByIdAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Read-only list ordered by name, then code. Inactive branches are included only when
+    /// <paramref name="includeInactive"/> is true.
+    /// </summary>
+    Task<List<Branch>> ListAsync(bool includeInactive, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Commits staged changes. Throws <see cref="DuplicateBranchCodeException"/> when the unique
     /// index on the code rejects the write.
     /// </summary>

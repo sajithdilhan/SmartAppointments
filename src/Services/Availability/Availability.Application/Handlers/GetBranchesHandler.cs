@@ -1,28 +1,22 @@
-﻿using Availability.Application.Models;
+using Availability.Application.Abstractions;
+using Availability.Application.Models;
 using Availability.Application.Queries;
-using Availability.Domain.Entities;
 using MediatR;
-using Microsoft.Extensions.Logging;
+using SmartAppointments.BuildingBlocks;
 using SmartAppointments.BuildingBlocks.Models;
 
 namespace Availability.Application.Handlers;
 
-public class GetBranchesHandler(ILogger<GetBranchesHandler> logger) : IRequestHandler<GetBranchesQuery, Result<List<BranchResponse>>>
+public class GetBranchesHandler(IBranchRepository branchRepository) : IRequestHandler<GetBranchesQuery, Result<List<BranchResponse>>>
 {
     public async Task<Result<List<BranchResponse>>> Handle(GetBranchesQuery request, CancellationToken cancellationToken)
     {
-        // Implement the logic to retrieve branches from the repository or service
-        // For example:
-        // var branches = await branchRepository.GetAllBranchesAsync(cancellationToken);
-        // return Result<List<BranchResponse>>.Success(branches);
-        // Placeholder implementation
-        logger.LogInformation("Handling GetBranchesQuery");
-        var b1 = BranchResponse.From(Branch.Create("MAIN", "Main Branch", null, "123 Main St", "+15551234"));
-        var b2 = BranchResponse.From(Branch.Create("SEC", "Secondary Branch", null, "456 Elm St", "+15555678"));
-        var branches = new List<BranchResponse>();
-        branches.Add(b1);
-        branches.Add(b2);
+        // Only an admin can act on a closed branch, so for anyone else includeInactive is ignored
+        // rather than rejected.
+        var includeInactive = request.IncludeInactive && request.CurrentUserRole == Constants.AdminRole;
 
-        return Result<List<BranchResponse>>.Success(branches);
+        var branches = await branchRepository.ListAsync(includeInactive, cancellationToken);
+
+        return Result<List<BranchResponse>>.Success(branches.Select(BranchResponse.From).ToList());
     }
 }

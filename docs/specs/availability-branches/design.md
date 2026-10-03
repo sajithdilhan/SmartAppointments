@@ -38,7 +38,7 @@ The controller keeps its existing `[Route("api/[controller]")]`, so the routes a
 | `GET /api/branches?includeInactive=` | `GetBranches(bool includeInactive, ct)` | `AllowedOriginsPolicy` | `GetBranchesQuery(IncludeInactive, CurrentUserRole)` | 4 |
 | `GET /api/branches/{id}` | `GetBranch(Guid id, ct)` | `AllowedOriginsPolicy` | `GetBranchQuery(Id, CurrentUserRole)` | 4 |
 
-`Create` returns `201 Created` with the `Location` header `/api/branches/{id}` (Req 1.1). Until `GetBranch` exists it uses `Created(uri, value)` with a literal path. When Requirement 4 adds `GetBranch`, it switches to `CreatedAtAction(nameof(GetBranch), ...)`, as Auth's `Register` does.
+`Create` returns `201 Created` via `CreatedAtAction(nameof(GetBranch), ...)`, as Auth's `Register` does, so the `Location` header is `/api/Branches/{id}` (Req 1.1). Until `GetBranch` existed it used `Created(uri, value)` with a literal path. The `{id}` routes carry a `:guid` constraint, so a malformed id is a routing `404` rather than a binding error.
 
 `UpdateBranchRequest` has no `Code` property. A `Code` field in the JSON body is dropped by the model binder, which is how Req 2.3 is met without a special rule.
 
@@ -78,7 +78,7 @@ public interface IBranchRepository
 }
 ```
 
-Staging and committing are separate, as in Auth, so that a later outbox insert can share the transaction. Each method is added in the task that first needs it, so `GetByIdAsync`, `GetForUpdateByIdAsync` and `ListAsync` wait for Requirements 2–4.
+Staging and committing are separate, as in Auth, so that a later outbox insert can share the transaction. Each method was added in the task that first needed it.
 
 `DuplicateBranchCodeException` lives in `Application/Abstractions`, beside the interface whose contract it is part of, as `DuplicateEmailException` does in Auth.
 

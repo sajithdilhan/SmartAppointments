@@ -4,4 +4,4 @@ using SmartAppointments.BuildingBlocks.Models;
 
 namespace Availability.Application.Queries;
 
-public sealed record GetBranchesQuery(bool IncludeInactive, string? CurrentUserRole) : IRequest<Result<List<BranchResponse>>>;
+public sealed record GetBranchQuery(Guid Id, string? CurrentUserRole) : IRequest<Result<BranchResponse>>;
