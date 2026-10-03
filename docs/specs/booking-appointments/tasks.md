@@ -1,6 +1,16 @@
 # Booking appointments — Tasks
 
 > Each task leaves the solution building and `dotnet test SmartAppointments.slnx` green. Tasks are grouped into chunks (A-E) that can be handed to an implementer one at a time; do them in order. The design's *Decisions taken* section is final.
+>
+> All fourteen tasks are done. Besides the unit tests (BuildingBlocks 47, Availability 297, Booking 95, Auth 81, all green), the flow was verified end to end against local PostgreSQL with Auth, Availability and Booking running (migrations `AddSlotReservations` and Booking `InitialCreate` applied).
+>
+> Availability internal API: `GET /internal/slots/{id}` returned `200` and an unknown id `404`. Reserving twice with the same appointment id returned `204`/`204` with `ReservedCount` 1; another appointment id on the full capacity-1 slot returned `409`; releasing twice returned `204`/`204` with the count back at 0. A customer JWT, no key and a wrong key on `/internal` were all `401`, and the API key on `/api/slots/available` was `401`. Thirty parallel reserves with different ids on a capacity-1 slot gave exactly one `204` and 29 `409`s, with count 1. Reserve on a started slot (backdated in the database) was `409` and release there `204`; reserve on an inactive branch was `409` and release `204`.
+>
+> Booking create: no `Idempotency-Key` returned `400`; with a key `201` with `Location` and status `Booked`. The same key and body replayed the identical `201` body and `Location` with one appointment row and the count unchanged; the same key with another slot returned `422`; an overlapping slot with a new key `409`; a second customer on the full slot `409` "Slot is full."; an unknown slot `404`; an admin token `403`. Get: owner, staff (a registered user promoted to Staff in the auth database) and admin all `200`; another customer and an unknown id both `404` with the same body shape. Cancel: another customer `404`, staff `404`, owner `204` with the count back to 0, a repeat cancel `204`, and cancel after the start (appointment backdated) `409`.
+>
+> Overlap race: two parallel creates by one customer with different keys for overlapping slots gave one `201` and one `409`, and total reservations rose by exactly one. Stranded claim: a slot reserved under appointment id X plus an `InProgress` idempotency record carrying X with an expired lease (crafted in the database to simulate a lost reserve response); the same-key retry returned `201` with id X and `ReservedCount` stayed 1. Outage (Availability stopped): create returned `503` and, because the failure happened reading the slot (before any reserve), no idempotency record remained; cancel returned `503` with the appointment left `Cancelled`; after Availability restarted the repeat cancel returned `204` and released the place.
+>
+> Circuit breaker: with the standard handler's defaults (minimum throughput 100 in a 30 s window) the circuit did not open under 8 consecutive failing creates; each took the full 20 s total timeout. The defaults were kept (design, *Decisions taken* 5). Not exercised end to end: a reserve-time timeout with the real HTTP client; it is covered by the handler unit tests and the stranded-claim simulation.
 
 ## Chunk A — Shared API-key authentication
 
@@ -77,7 +87,7 @@
 
 ## Chunk E — End-to-end check and documentation
 
-- [ ] 13. Verify against a local PostgreSQL
+- [x] 13. Verify against a local PostgreSQL
   - Create the databases (`smart_appointment_availability` exists; `smart_appointment_booking` is new), apply both services' migrations, run Auth, Availability and Booking, register an admin and two customers
   - Availability: generate slots with capacity 1; with the API key `GET /internal/slots/{id}` returns the slot; reserve twice with the same appointment id leaves `ReservedCount` at 1; a second appointment id gets `409` "full"; release twice leaves it at 0; a customer JWT on `/internal/...` gets `401`; no key, wrong key `401`; the API key on `/api/slots/available` gets `401`; reserve on an inactive branch, a started slot `409`, and release on the same `204`
   - Concurrency: fire a few dozen parallel reserves with different appointment ids at the capacity-1 slot; exactly one `204`, the rest `409`, `ReservedCount` is 1
@@ -85,11 +95,11 @@
   - Get: owner `200`; another customer `404`; staff `200`; unknown id `404` with the same body as the other customer's
   - Cancel: owner `204` and the slot's `ReservedCount` returns to 0; repeat cancel `204`; cancel by another customer `404`; cancel after start `409`
   - Overlap race: two parallel creates by one customer with different keys for overlapping slots give one `201` and one `409`, and the loser's slot returns to its prior `ReservedCount`
-  - Outage: stop Availability, then create → `503` and, because the reserve call was attempted, the `IdempotencyRecords` row for that key stays `InProgress` with its `AppointmentId`; after the 2-minute lease, retrying with the same key succeeds and reuses that appointment id with `ReservedCount` incremented once; a create that fails while reading the slot leaves no record; cancel an appointment → `503`, status `Cancelled`; restart Availability and repeat the cancel → `204`, capacity released; after repeated failures the circuit opens and calls fail fast
+  - Outage: stop Availability, then create → `503` and, because the reserve call was attempted, the `IdempotencyRecords` row for that key stays `InProgress` with its `AppointmentId`; after the 2-minute lease, retrying with the same key succeeds and reuses that appointment id with `ReservedCount` incremented once; a create that fails while reading the slot leaves no record; cancel an appointment → `503`, status `Cancelled`; restart Availability and repeat the cancel → `204`, capacity released; the standard handler's circuit opens only at production-like volume (minimum throughput 100 in 30 s), so locally each call fails after the 20 s total timeout
   - Record the results in this file's header, as the other specs do
   - _Requirements: 1–10_
 
-- [ ] 14. Documentation
+- [x] 14. Documentation
   - `CLAUDE.md` project status: Availability now has internal reserve/release/get under an API key; add the Booking service paragraph (create/get/cancel, idempotency, resilient client, `smart_appointment_booking`); BuildingBlocks.Web now also holds the API-key scheme and the `InternalApi:Key` setting (and `Services:Availability:BaseUrl` for Booking); mention that the outbox and events are still pending
   - `docs/specs/README.md` row to "Implemented"; `docs/specs/availability-slots/requirements.md` out-of-scope note for `FR-AVL-005` gets a pointer to this spec; the Availability line in `CLAUDE.md` no longer says reserve/release is unbuilt
   - _Requirements: 1–10_
