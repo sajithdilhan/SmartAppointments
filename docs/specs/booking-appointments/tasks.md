@@ -33,19 +33,19 @@
 
 ## Chunk C — Booking service: scaffold, domain, persistence
 
-- [ ] 6. Scaffold the Booking projects
+- [x] 6. Scaffold the Booking projects
   - `Booking.Api`, `.Application`, `.Domain`, `.Infrastructure` under `src/Services/Booking/`, `tests/Booking.Tests` (with a copy of `FixedTimeProvider`), all added to `SmartAppointments.slnx`; references and packages mirror Availability (`Npgsql.EntityFrameworkCore.PostgreSQL`, `AspNetCore.HealthChecks.NpgSql`, MediatR, FluentValidation, `Scalar.AspNetCore`, `BuildingBlocks.Web`) plus `Microsoft.Extensions.Http.Resilience` in Infrastructure
   - `Program.cs` in the wiring order of Availability with `JsonStringEnumConverter`; `AddApplication` registers `TimeProvider.System`, MediatR and validators; `AddInfrastructure` fails fast on a missing connection string; `/healthz`; Scalar in development; `launchSettings.json` with its own ports
-  - `appsettings.json` (empty `ConnectionStrings:DefaultConnection`, `Jwt` issuer/audience, empty `Jwt:SecretKey`, empty `InternalApi:Key`, empty `Services:Availability:BaseUrl`); `appsettings.Development.json` (database `smart_appointment_booking`, Auth's JWT key, the dev API key equal to Availability's, `http://localhost:5202`)
+  - `appsettings.json` (empty `ConnectionStrings:DefaultConnection`, `Jwt` issuer/audience, empty `Jwt:SecretKey`, empty `InternalApi:Key`, empty `Services:Availability:BaseUrl`); `appsettings.Development.json` (database `smart_appointment_booking`, Auth's JWT key, the dev API key equal to Availability's, `http://localhost:5202` (verified against Availability's launchSettings))
   - A trivial test so `Booking.Tests` runs
   - _Requirements: 10.1–10.4_
 
-- [ ] 7. Domain: `Appointment` and `IdempotencyRecord`
+- [x] 7. Domain: `Appointment` and `IdempotencyRecord`
   - `AppointmentStatus`, `Appointment.Book`/`Cancel`, `IdempotencyState`, `IdempotencyRecord.Claim`/`Complete`/`IsExpired` (2-minute lease, 24-hour window)
   - `AppointmentTests`, `IdempotencyRecordTests`
   - _Requirements: 5.2, 6.2, 6.8, 6.9, 8.1_
 
-- [ ] 8. Persistence and migration
+- [x] 8. Persistence and migration
   - `ApplicationDbContext` (`Appointments`, `IdempotencyRecords` as in the design, including the unique `(UserId, IdempotencyKey)` index and `jsonb` body), `UniqueViolation` helper, `DesignTimeDbContextFactory` with the API's user-secrets id, migration `InitialCreate`
   - `IAppointmentRepository`, `IIdempotencyRepository` (and `ClaimResult`, `AddAppointmentOutcome`) in Application; `AppointmentRepository` (including `TryAddBookedAsync`: one transaction taking `pg_advisory_xact_lock(hashtextextended(customerId::text, 0))`, re-running the overlap query, inserting the appointment and completing the idempotency record) and `IdempotencyRepository` (claim, replay detection, expired takeover reusing an in-progress record's appointment id, complete, remove; `RemoveAsync` only deletes a record still in progress and owned by the caller) in Infrastructure; registered in `AddInfrastructure`
   - Nothing here is exercised by a unit test; it is checked by hand in task 13
