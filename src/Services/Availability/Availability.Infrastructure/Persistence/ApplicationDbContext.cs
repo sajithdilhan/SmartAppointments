@@ -24,9 +24,25 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.IsActive).IsRequired();
             entity.Property(e => e.CreatedAtUtc).IsRequired();
 
-            entity.HasIndex(e => e.Code).IsUnique();
+            entity.HasIndex(e => e.Code).IsUnique().HasDatabaseName(BranchRepository.CodeIndexName);
+        });
+
+        modelBuilder.Entity<ServiceType>(entity =>
+        {
+            entity.ToTable("ServiceTypes");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.DurationMinutes).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired();
+            entity.Property(e => e.CreatedAtUtc).IsRequired();
+
+            entity.HasIndex(e => e.Code).IsUnique().HasDatabaseName(ServiceTypeRepository.CodeIndexName);
         });
     }
 
     public DbSet<Branch> Branches { get; set; }
+
+    public DbSet<ServiceType> ServiceTypes { get; set; }
 }

@@ -22,6 +22,7 @@ public static class DependencyInjection
         }
 
         services.AddScoped<IBranchRepository, BranchRepository>();
+        services.AddScoped<IServiceTypeRepository, ServiceTypeRepository>();
         services.AddDbContext<ApplicationDbContext>(options =>
         {
             options.UseNpgsql(connectionString);

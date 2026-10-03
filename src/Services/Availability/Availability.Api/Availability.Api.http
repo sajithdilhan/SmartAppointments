@@ -58,6 +58,56 @@ Authorization: Bearer {{AdminToken}}
 
 ###
 
+# ---- Service types -------------------------------------------------------
+
+@ServiceTypeId = <paste id>
+
+POST {{Availability.Api_HostAddress}}/api/services
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "code": "VEHICLE_INSPECTION",
+  "name": "Vehicle inspection",
+  "description": "Bring the vehicle logbook",
+  "durationMinutes": 30
+}
+
+###
+
+GET {{Availability.Api_HostAddress}}/api/services?includeInactive=true
+Authorization: Bearer {{AdminToken}}
+
+###
+
+GET {{Availability.Api_HostAddress}}/api/services/{{ServiceTypeId}}
+Authorization: Bearer {{AdminToken}}
+
+###
+
+# The code cannot be changed. A new duration applies only to slots generated afterwards.
+PUT {{Availability.Api_HostAddress}}/api/services/{{ServiceTypeId}}
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "name": "Vehicle inspection",
+  "description": "Bring the vehicle logbook and insurance",
+  "durationMinutes": 45
+}
+
+###
+
+POST {{Availability.Api_HostAddress}}/api/services/{{ServiceTypeId}}/deactivate
+Authorization: Bearer {{AdminToken}}
+
+###
+
+POST {{Availability.Api_HostAddress}}/api/services/{{ServiceTypeId}}/activate
+Authorization: Bearer {{AdminToken}}
+
+###
+
 GET {{Availability.Api_HostAddress}}/healthz
 
 ###
