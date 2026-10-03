@@ -2,6 +2,7 @@ using Booking.Application.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SmartAppointments.BuildingBlocks;
+using SmartAppointments.BuildingBlocks.Web.Http;
 
 namespace Booking.Infrastructure.Clients;
 
@@ -25,12 +26,17 @@ public static class AvailabilityClientExtensions
                 "'dotnet user-secrets' locally, or through the environment ('InternalApi__Key') everywhere else.");
         }
 
+        services.AddHttpContextAccessor();
+        services.AddTransient<CorrelationIdHandler>();
+
         services.AddHttpClient<IAvailabilityClient, AvailabilityClient>(client =>
             {
                 client.BaseAddress = baseUri;
                 // Never logged: LoggingMiddleware logs only the method and path.
                 client.DefaultRequestHeaders.Add(Constants.ApiKeyHeaderName, apiKey);
             })
+            // Before the resilience handler, so every retry carries the same correlation id.
+            .AddHttpMessageHandler<CorrelationIdHandler>()
             .AddStandardResilienceHandler(options =>
             {
                 options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5);

@@ -34,11 +34,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseMiddleware<LoggingMiddleware>();
 
-app.UseHttpsRedirection();
-
+// No HTTPS redirection: TLS terminates at the API gateway.
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -6,25 +6,25 @@
 
 ## Chunk A — Correlation id in the shared library and the services
 
-- [ ] 1. `CorrelationIdMiddleware` in `BuildingBlocks.Web`
+- [x] 1. `CorrelationIdMiddleware` in `BuildingBlocks.Web`
   - `Constants.CorrelationIdHeaderName = "X-Correlation-ID"` in `BuildingBlocks`
   - `Middlewares/CorrelationIdMiddleware` (validate or generate, `Items`, request header overwrite, `OnStarting` response header with assignment, logger scope) and `GetCorrelationId(this HttpContext)`; hand-written character check, no `Regex`
   - `CorrelationIdMiddlewareTests` in `tests/BuildingBlocks.Tests`: kept/regenerated cases and the 1/64/65 boundaries, request header rewritten, response header exactly once, `500` from a throwing delegate behind `ExceptionMiddleware` still carries it, scope seen by a recording logger, `TraceIdentifier` untouched
   - _Requirements: 5.1–5.6_
 
-- [ ] 2. Wire it into Auth, Availability and Booking
+- [x] 2. Wire it into Auth, Availability and Booking
   - `app.UseMiddleware<CorrelationIdMiddleware>();` directly above `ExceptionMiddleware` in the three `Program.cs`
   - `"Logging": { "Console": { "IncludeScopes": true } }` in the three services' `appsettings.json`
   - Existing tests stay green; nothing else changes
   - _Requirements: 5.1, 5.6, 5.8_
 
-- [ ] 3. Booking's Availability client forwards the id
+- [x] 3. Booking's Availability client forwards the id
   - `CorrelationIdHandler` in `BuildingBlocks.Web` (adds the header from `IHttpContextAccessor`'s request when missing, adds nothing without a context)
   - `Booking.Infrastructure` references `BuildingBlocks.Web`; `AddAvailabilityClient` calls `AddHttpContextAccessor()` and `.AddHttpMessageHandler<CorrelationIdHandler>()` **before** `AddStandardResilienceHandler`
   - `CorrelationIdHandlerTests` in `BuildingBlocks.Tests` (present, absent, not overwritten, same value on two attempts); an addition to `AvailabilityClientTests` in `Booking.Tests`
   - _Requirements: 5.7_
 
-- [ ] 3.1 Remove HTTPS redirection from the services
+- [x] 3.1 Remove HTTPS redirection from the services
   - Delete `app.UseHttpsRedirection();` from the `Program.cs` of Auth, Availability and Booking, with a comment that TLS terminates at the gateway; launch settings and ports unchanged; Booking's `Services:Availability:BaseUrl` stays `http://localhost:5202`
   - _Requirements: 9.1–9.3_
 
