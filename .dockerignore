@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+.git/
+.vs/
+.vscode/
+.claude/
+.github/
+tests/
+docs/
+.env
+**/*.user

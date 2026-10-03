@@ -1,5 +1,6 @@
 using Booking.Application.Dependency;
 using Booking.Infrastructure.Dependency;
+using Booking.Infrastructure.Persistence;
 using Scalar.AspNetCore;
 using System.Text.Json.Serialization;
 using SmartAppointments.BuildingBlocks.Web.Authentication;
@@ -19,6 +20,8 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddAuthorizationWithRoles();
 
 var app = builder.Build();
+
+await DatabaseMigrator.MigrateIfEnabledAsync(app.Services);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

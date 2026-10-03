@@ -19,6 +19,7 @@ builder.Services.AddAuthorizationWithRoles();
 
 var app = builder.Build();
 
+await DatabaseMigrator.MigrateIfEnabledAsync(app.Services);
 await DatabaseSeeder.SeedAsync(app.Services);
 
 // Configure the HTTP request pipeline.

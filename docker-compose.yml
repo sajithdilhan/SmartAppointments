@@ -1,0 +1,92 @@
+name: smartappointments
+
+x-dotnet-service: &dotnet-service
+  restart: on-failure
+  environment: &dotnet-env
+    ASPNETCORE_ENVIRONMENT: Development
+    Jwt__SecretKey: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env (copy .env.example)}
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (copy .env.example)}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # TCP on purpose: during init the temporary server listens on the Unix socket only.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  auth:
+    <<: *dotnet-service
+    build:
+      context: .
+      dockerfile: src/Services/Auth/Auth.Api/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *dotnet-env
+      Database__MigrateOnStartup: "true"
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=smart_appointment_users;Username=postgres;Password=${POSTGRES_PASSWORD}
+      Seed__Admin__Email: ${SEED_ADMIN_EMAIL:-}
+      Seed__Admin__Password: ${SEED_ADMIN_PASSWORD:-}
+      Seed__Admin__FirstName: ${SEED_ADMIN_FIRST_NAME:-}
+      Seed__Admin__LastName: ${SEED_ADMIN_LAST_NAME:-}
+      Seed__Admin__PhoneNumber: ${SEED_ADMIN_PHONE_NUMBER:-}
+
+  availability:
+    <<: *dotnet-service
+    build:
+      context: .
+      dockerfile: src/Services/Availability/Availability.Api/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *dotnet-env
+      Database__MigrateOnStartup: "true"
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=smart_appointment_availability;Username=postgres;Password=${POSTGRES_PASSWORD}
+      InternalApi__Key: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env (copy .env.example)}
+
+  booking:
+    <<: *dotnet-service
+    build:
+      context: .
+      dockerfile: src/Services/Booking/Booking.Api/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *dotnet-env
+      Database__MigrateOnStartup: "true"
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=smart_appointment_booking;Username=postgres;Password=${POSTGRES_PASSWORD}
+      InternalApi__Key: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env (copy .env.example)}
+      Services__Availability__BaseUrl: http://availability:8080
+
+  gateway:
+    <<: *dotnet-service
+    build:
+      context: .
+      dockerfile: src/ApiGateway/SmartAppointments.Gateway/Dockerfile
+    depends_on:
+      - auth
+      - availability
+      - booking
+    ports:
+      - "${GATEWAY_PORT:-5290}:8080"
+    environment:
+      <<: *dotnet-env
+      ReverseProxy__Clusters__auth__Destinations__primary__Address: http://auth:8080
+      ReverseProxy__Clusters__availability__Destinations__primary__Address: http://availability:8080
+      ReverseProxy__Clusters__booking__Destinations__primary__Address: http://booking:8080
+
+volumes:
+  postgres-data:
