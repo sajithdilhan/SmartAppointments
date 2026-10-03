@@ -22,6 +22,11 @@ public interface ISlotRepository
     Task<List<Slot>> SearchAvailableAsync(
         Guid branchId, Guid serviceTypeId, DateOnly localDate, DateTime afterUtc, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Read-only lookup of one slot by id.
+    /// </summary>
+    Task<Slot?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+
     /// <exception cref="DuplicateSlotException">A concurrent request created the same slot.</exception>
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

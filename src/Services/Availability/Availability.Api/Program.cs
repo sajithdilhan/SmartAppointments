@@ -17,6 +17,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApiWithBearerAuth();
 builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddApiKeyAuthentication(builder.Configuration);
 builder.Services.AddAuthorizationWithRoles();
 
 var app = builder.Build();

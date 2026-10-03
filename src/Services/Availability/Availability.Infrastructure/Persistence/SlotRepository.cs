@@ -41,6 +41,11 @@ public class SlotRepository(ApplicationDbContext context) : ISlotRepository
             .ToListAsync(cancellationToken);
     }
 
+    public Task<Slot?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return context.Slots.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
+    }
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         try

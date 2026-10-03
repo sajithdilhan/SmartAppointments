@@ -18,6 +18,8 @@ public static class ErrorResultExtensions
         StatusCodes.Status403Forbidden => controller.StatusCode(StatusCodes.Status403Forbidden, error),
         StatusCodes.Status404NotFound => controller.NotFound(error),
         StatusCodes.Status409Conflict => controller.Conflict(error),
+        StatusCodes.Status422UnprocessableEntity => controller.UnprocessableEntity(error),
+        StatusCodes.Status503ServiceUnavailable => controller.StatusCode(StatusCodes.Status503ServiceUnavailable, error),
         _ => controller.StatusCode(StatusCodes.Status500InternalServerError, error)
     };
 }

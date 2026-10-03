@@ -6,7 +6,7 @@ A slot is a bookable interval at one branch for one service type, with a capacit
 
 Slots are generated from working hours, so this spec also gives each branch a **schedule**: an IANA time zone and its opening hours for each day of the week. The branches spec deliberately left working hours and time zones to this one.
 
-The spec refines sections 6, 7.1, 8 (Availability Management), 9 and 13 of [`docs/requirements.md`](../../requirements.md) and covers `FR-AVL-003` and `FR-AVL-004`. Reserving and releasing a slot (`FR-AVL-005`) is out of scope; it arrives with Booking, but the slot model already carries the reserved count it will need. The service foundations of [`availability-branches`](../availability-branches/requirements.md) (Requirements 5 and 6) apply unchanged.
+The spec refines sections 6, 7.1, 8 (Availability Management), 9 and 13 of [`docs/requirements.md`](../../requirements.md) and covers `FR-AVL-003` and `FR-AVL-004`. Reserving and releasing a slot (`FR-AVL-005`) is out of scope here; it is specified and built in [`booking-appointments`](../booking-appointments/requirements.md), and the slot model already carries the reserved count it will need. The service foundations of [`availability-branches`](../availability-branches/requirements.md) (Requirements 5 and 6) apply unchanged.
 
 ## Requirements
 
@@ -70,7 +70,7 @@ The spec refines sections 6, 7.1, 8 (Availability Management), 9 and 13 of [`doc
 
 ## Out of scope
 
-- **Reserve and release (`FR-AVL-005`).** They need the Booking service and service-to-service authentication. `Slot` already carries `Capacity` and `ReservedCount`, so they need no schema change.
+- **Reserve and release (`FR-AVL-005`).** They need the Booking service and service-to-service authentication. `Slot` already carries `Capacity` and `ReservedCount`. They are specified in [`booking-appointments`](../booking-appointments/requirements.md).
 - **Deleting, editing or blocking out slots**, and holidays or one-off closures. Each needs its own rules about slots that already have reservations.
 - **An admin view of all slots, including full and past ones.** Reporting will cover utilisation.
 - **Split shifts (two intervals on one day).** One interval per day; a lunch break can be modelled later as a second interval without breaking this API.

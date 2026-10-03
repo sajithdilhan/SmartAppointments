@@ -156,7 +156,28 @@ namespace Availability.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_Slots_BranchId_ServiceTypeId_StartUtc");
 
-                    b.ToTable("Slots", (string)null);
+                    b.ToTable("Slots", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Slots_ReservedCount_NonNegative", "\"ReservedCount\" >= 0");
+
+                            t.HasCheckConstraint("CK_Slots_ReservedCount_WithinCapacity", "\"ReservedCount\" <= \"Capacity\"");
+                        });
+                });
+
+            modelBuilder.Entity("Availability.Domain.Entities.SlotReservation", b =>
+                {
+                    b.Property<Guid>("SlotId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AppointmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("SlotId", "AppointmentId");
+
+                    b.ToTable("SlotReservations", (string)null);
                 });
 
             modelBuilder.Entity("Availability.Domain.Entities.Branch", b =>
@@ -197,6 +218,15 @@ namespace Availability.Infrastructure.Persistence.Migrations
                     b.HasOne("Availability.Domain.Entities.ServiceType", null)
                         .WithMany()
                         .HasForeignKey("ServiceTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Availability.Domain.Entities.SlotReservation", b =>
+                {
+                    b.HasOne("Availability.Domain.Entities.Slot", null)
+                        .WithMany()
+                        .HasForeignKey("SlotId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

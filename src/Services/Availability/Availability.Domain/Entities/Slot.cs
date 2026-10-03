@@ -28,7 +28,9 @@ public sealed class Slot
     public int Capacity { get; private set; }
 
     /// <summary>
-    /// Always 0 until booking reserves capacity.
+    /// The number of live <see cref="SlotReservation"/> rows for the slot. Changed only by
+    /// <c>SlotReservationRepository</c>, with conditional updates in the same transaction as the
+    /// reservation row, so it can neither oversell the slot nor go negative.
     /// </summary>
     public int ReservedCount { get; private set; }
 

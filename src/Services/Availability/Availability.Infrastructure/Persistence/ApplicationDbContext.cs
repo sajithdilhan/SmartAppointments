@@ -55,8 +55,7 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Slot>(entity =>
         {
-            entity.ToTable("Slots");
-            entity.HasKey(e => e.Id);
+                        entity.HasKey(e => e.Id);
             entity.Property(e => e.LocalDate).IsRequired();
             entity.Property(e => e.StartUtc).IsRequired();
             entity.Property(e => e.EndUtc).IsRequired();
@@ -73,6 +72,26 @@ public class ApplicationDbContext : DbContext
                 .HasDatabaseName(SlotRepository.StartIndexName);
             entity.HasIndex(e => new { e.BranchId, e.ServiceTypeId, e.LocalDate })
                 .HasDatabaseName(SlotRepository.LocalDateIndexName);
+
+            // Backstop for the conditional updates in SlotReservationRepository: even a bug there
+            // cannot oversell a slot or take its count below zero.
+            entity.ToTable("Slots", t =>
+            {
+                t.HasCheckConstraint("CK_Slots_ReservedCount_NonNegative", "\"ReservedCount\" >= 0");
+                t.HasCheckConstraint("CK_Slots_ReservedCount_WithinCapacity", "\"ReservedCount\" <= \"Capacity\"");
+            });
+        });
+
+        modelBuilder.Entity<SlotReservation>(entity =>
+        {
+            entity.ToTable("SlotReservations");
+            // The composite key is the unique constraint that makes a repeat reserve a no-op.
+            entity.HasKey(e => new { e.SlotId, e.AppointmentId });
+            entity.Property(e => e.CreatedAtUtc).IsRequired();
+
+            // Restrict: a slot with reservations must not disappear under them. AppointmentId has
+            // no foreign key; it points into Booking's database.
+            entity.HasOne<Slot>().WithMany().HasForeignKey(e => e.SlotId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 
@@ -81,4 +100,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<ServiceType> ServiceTypes { get; set; }
 
     public DbSet<Slot> Slots { get; set; }
+
+    public DbSet<SlotReservation> SlotReservations { get; set; }
 }
