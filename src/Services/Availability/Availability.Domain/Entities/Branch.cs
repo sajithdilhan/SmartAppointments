@@ -26,6 +26,20 @@ public sealed class Branch
 
     public DateTime? UpdatedAtUtc { get; private set; }
 
+    /// <summary>
+    /// The IANA zone the working hours are expressed in. Null until a schedule is set, and slots
+    /// cannot be generated before then.
+    /// </summary>
+    public string? TimeZoneId { get; private set; }
+
+    private readonly List<WorkingHours> _workingHours = [];
+
+    /// <summary>
+    /// The open days, in no particular order. Use <see cref="WorkingHours.MondayFirstOrder"/> to
+    /// present them Monday first.
+    /// </summary>
+    public IReadOnlyList<WorkingHours> WorkingHours => _workingHours;
+
     public static Branch Create(
         string code,
         string name,
@@ -57,6 +71,38 @@ public sealed class Branch
         Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
         Address = address.Trim();
         PhoneNumber = phoneNumber.Trim();
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Replaces the weekly schedule. The collection is updated in place: retained days get their
+    /// new times, unlisted days are removed and new days added. A day is never removed and
+    /// re-added, which EF Core would reject because the day is part of the key.
+    /// </summary>
+    public void SetSchedule(string timeZoneId, IEnumerable<WorkingHours> workingHours)
+    {
+        var incoming = workingHours.ToList();
+        if (incoming.Select(w => w.DayOfWeek).Distinct().Count() != incoming.Count)
+        {
+            throw new ArgumentException("A day of the week can be listed only once.", nameof(workingHours));
+        }
+
+        _workingHours.RemoveAll(existing => incoming.All(w => w.DayOfWeek != existing.DayOfWeek));
+
+        foreach (var hours in incoming)
+        {
+            var existing = _workingHours.FirstOrDefault(w => w.DayOfWeek == hours.DayOfWeek);
+            if (existing is null)
+            {
+                _workingHours.Add(new WorkingHours(hours.DayOfWeek, hours.OpensAt, hours.ClosesAt));
+            }
+            else
+            {
+                existing.ChangeTimes(hours.OpensAt, hours.ClosesAt);
+            }
+        }
+
+        TimeZoneId = timeZoneId;
         UpdatedAtUtc = DateTime.UtcNow;
     }
 

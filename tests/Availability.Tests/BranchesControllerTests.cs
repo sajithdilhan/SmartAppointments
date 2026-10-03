@@ -23,7 +23,7 @@ public class BranchesControllerTests
     public async Task Create_Successful_Returns_Created_With_Location()
     {
         var response = new BranchResponse(
-            Guid.CreateVersion7(), "PG", "Pettah", null, "12 Main Street", "+94112345678", true, DateTime.UtcNow, null);
+            Guid.CreateVersion7(), "PG", "Pettah", null, "12 Main Street", "+94112345678", true, DateTime.UtcNow, null, null, []);
         var sender = new Mock<ISender>();
         sender.Setup(s => s.Send(It.IsAny<CreateBranchCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<BranchResponse>.Success(response));
@@ -73,6 +73,7 @@ public class BranchesControllerTests
     [Theory]
     [InlineData(nameof(BranchesController.Create), Constants.AdminPolicy)]
     [InlineData(nameof(BranchesController.Update), Constants.AdminPolicy)]
+    [InlineData(nameof(BranchesController.SetSchedule), Constants.AdminPolicy)]
     [InlineData(nameof(BranchesController.Activate), Constants.AdminPolicy)]
     [InlineData(nameof(BranchesController.Deactivate), Constants.AdminPolicy)]
     [InlineData(nameof(BranchesController.GetBranches), Constants.AllowedOriginsPolicy)]
@@ -95,7 +96,7 @@ public class BranchesControllerTests
     {
         var id = Guid.CreateVersion7();
         var response = new BranchResponse(
-            id, "PG", "Pettah North", null, "14 Main Street", "+94112345678", true, DateTime.UtcNow, DateTime.UtcNow);
+            id, "PG", "Pettah North", null, "14 Main Street", "+94112345678", true, DateTime.UtcNow, DateTime.UtcNow, null, []);
         var sender = new Mock<ISender>();
         sender.Setup(s => s.Send(It.IsAny<UpdateBranchCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<BranchResponse>.Success(response));
@@ -174,7 +175,7 @@ public class BranchesControllerTests
     {
         var id = Guid.CreateVersion7();
         var response = new BranchResponse(
-            id, "PG", "Pettah", null, "12 Main Street", "+94112345678", false, DateTime.UtcNow, null);
+            id, "PG", "Pettah", null, "12 Main Street", "+94112345678", false, DateTime.UtcNow, null, null, []);
         var sender = new Mock<ISender>();
         sender.Setup(s => s.Send(new GetBranchQuery(id, Constants.AdminRole), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<BranchResponse>.Success(response));
@@ -197,6 +198,43 @@ public class BranchesControllerTests
         var result = await controller.GetBranch(Guid.CreateVersion7(), CancellationToken.None);
 
         Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task SetSchedule_Successful_Returns_Ok_With_The_Branch()
+    {
+        var id = Guid.CreateVersion7();
+        var response = new BranchResponse(
+            id, "PG", "Pettah", null, "12 Main Street", "+94112345678", true, DateTime.UtcNow, DateTime.UtcNow,
+            "Asia/Colombo", [new WorkingHoursResponse(DayOfWeek.Monday, new TimeOnly(9, 0), new TimeOnly(17, 0))]);
+        var sender = new Mock<ISender>();
+        sender.Setup(s => s.Send(It.IsAny<SetBranchScheduleCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<BranchResponse>.Success(response));
+        var request = new SetBranchScheduleRequest("Asia/Colombo", [new WorkingHoursRequest(DayOfWeek.Monday, "09:00", "17:00")]);
+
+        var result = await new BranchesController(sender.Object).SetSchedule(id, request, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Same(response, ok.Value);
+        sender.Verify(s => s.Send(
+            It.Is<SetBranchScheduleCommand>(c =>
+                c.Id == id && c.TimeZoneId == "Asia/Colombo" && c.WorkingHours.SequenceEqual(request.WorkingHours)),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(400, typeof(BadRequestObjectResult))]
+    [InlineData(404, typeof(NotFoundObjectResult))]
+    public async Task SetSchedule_Failure_Maps_To_The_Handler_Status(int status, Type expectedResult)
+    {
+        var sender = new Mock<ISender>();
+        sender.Setup(s => s.Send(It.IsAny<SetBranchScheduleCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<BranchResponse>.Failure(new Error(status, "failure")));
+
+        var result = await new BranchesController(sender.Object)
+            .SetSchedule(Guid.CreateVersion7(), new SetBranchScheduleRequest("Asia/Colombo", []), CancellationToken.None);
+
+        Assert.IsType(expectedResult, result);
     }
 
     private static ControllerContext WithRole(string role) => new()

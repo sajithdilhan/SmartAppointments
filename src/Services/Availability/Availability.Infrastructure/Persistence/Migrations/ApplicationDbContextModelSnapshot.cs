@@ -58,15 +58,147 @@ namespace Availability.Infrastructure.Persistence.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
 
+                    b.Property<string>("TimeZoneId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Branches_Code");
 
                     b.ToTable("Branches", (string)null);
+                });
+
+            modelBuilder.Entity("Availability.Domain.Entities.ServiceType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ServiceTypes_Code");
+
+                    b.ToTable("ServiceTypes", (string)null);
+                });
+
+            modelBuilder.Entity("Availability.Domain.Entities.Slot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EndUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("LocalDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("ReservedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ServiceTypeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceTypeId");
+
+                    b.HasIndex("BranchId", "ServiceTypeId", "LocalDate")
+                        .HasDatabaseName("IX_Slots_BranchId_ServiceTypeId_LocalDate");
+
+                    b.HasIndex("BranchId", "ServiceTypeId", "StartUtc")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Slots_BranchId_ServiceTypeId_StartUtc");
+
+                    b.ToTable("Slots", (string)null);
+                });
+
+            modelBuilder.Entity("Availability.Domain.Entities.Branch", b =>
+                {
+                    b.OwnsMany("Availability.Domain.Entities.WorkingHours", "WorkingHours", b1 =>
+                        {
+                            b1.Property<Guid>("BranchId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("DayOfWeek")
+                                .HasColumnType("integer");
+
+                            b1.Property<TimeOnly>("ClosesAt")
+                                .HasColumnType("time without time zone");
+
+                            b1.Property<TimeOnly>("OpensAt")
+                                .HasColumnType("time without time zone");
+
+                            b1.HasKey("BranchId", "DayOfWeek");
+
+                            b1.ToTable("BranchWorkingHours", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("BranchId");
+                        });
+
+                    b.Navigation("WorkingHours");
+                });
+
+            modelBuilder.Entity("Availability.Domain.Entities.Slot", b =>
+                {
+                    b.HasOne("Availability.Domain.Entities.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Availability.Domain.Entities.ServiceType", null)
+                        .WithMany()
+                        .HasForeignKey("ServiceTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }
