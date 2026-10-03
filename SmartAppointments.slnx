@@ -31,5 +31,6 @@
     <Project Path="tests/Availability.Tests/Availability.Tests.csproj" />
     <Project Path="tests/Booking.Tests/Booking.Tests.csproj" />
     <Project Path="tests/BuildingBlocks.Tests/BuildingBlocks.Tests.csproj" />
+    <Project Path="tests/Gateway.Tests/Gateway.Tests.csproj" />
   </Folder>
 </Solution>

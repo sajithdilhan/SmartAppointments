@@ -30,12 +30,12 @@
 
 ## Chunk B — The gateway: YARP, JWT, pipeline, 502, tests project
 
-- [ ] 4. `ProblemDetailsWriter`
+- [x] 4. `ProblemDetailsWriter`
   - `Results/ProblemDetailsWriter.WriteAsync(HttpContext, int status, string detail)` in `BuildingBlocks.Web`, serializing `ApiProblemDetails` exactly as `ExceptionMiddleware` does; `ExceptionMiddleware` calls it (no behaviour change)
   - `ProblemDetailsWriterTests`; `ExceptionMiddlewareTests` pass unchanged
   - _Requirements: 4.1, 4.6_
 
-- [ ] 5. Gateway project: YARP, JWT and pipeline
+- [x] 5. Gateway project: YARP, JWT and pipeline
   - `SmartAppointments.Gateway.csproj`: `Yarp.ReverseProxy` (latest stable for `net10.0`), project reference to `BuildingBlocks.Web`
   - `appsettings.json`: `Jwt` (issuer, audience, empty secret), the nine routes and three clusters of the design **without** any `RateLimiterPolicy` yet, empty addresses, `Logging:Console:IncludeScopes`; `appsettings.Development.json`: Auth's `Jwt:SecretKey` and the three addresses `http://localhost:5008`, `5202`, `5310`
   - `Configuration/ReverseProxyValidator` and its call before `AddReverseProxy`
@@ -43,17 +43,17 @@
   - `launchSettings.json` ports unchanged
   - _Requirements: 1.1–1.9, 2.1–2.6, 2.8, 5.1, 5.6, 6.1–6.4, 6.6_
 
-- [ ] 6. `ProxyErrorMiddleware`: `502` and `504`
+- [x] 6. `ProxyErrorMiddleware`: `502` and `504`
   - First confirm that `IForwarderErrorFeature` and a custom step in the `MapReverseProxy` pipeline behave as designed; adjust the mechanism, not the requirement, if the API differs
   - `Proxy/ProxyErrorMiddleware` using `ProblemDetailsWriter`; registered in `MapReverseProxy(...)`; the cluster `HttpRequest.ActivityTimeout` of 30 s is already in the configuration
   - _Requirements: 4.1–4.5_
 
-- [ ] 7. `tests/Gateway.Tests`
+- [x] 7. `tests/Gateway.Tests`
   - New xUnit + Moq project mirroring `BuildingBlocks.Tests` (same package versions), referencing the Gateway project; the gateway's `appsettings.json` and `appsettings.Development.json` copied to the test output as linked content; added to `SmartAppointments.slnx`
   - `RoutingConfigurationTests` (nine routes, no `/internal`, no root catch-all, every route names a policy, anonymous only on login and register, clusters and addresses), `ReverseProxyValidatorTests`, `ProxyErrorMiddlewareTests`
   - _Requirements: 1.1, 1.4, 1.6, 2.1, 2.6, 4.1–4.5, 6.3, 7.1, 7.2_
 
-- [ ] 7.1 Development-only aggregated API docs
+- [x] 7.1 Development-only aggregated API docs
   - `Scalar.AspNetCore` in the gateway csproj at the same version as the services; `Docs/GatewayDocsExtensions.MapGatewayDocs` (documents `auth`, `availability`, `booking` at `/openapi/{service}/v1.json`, the services' title and theme, bearer preferred, `.AllowAnonymous()`), called from `Program.cs` only under `IsDevelopment()`; confirm the multi-document call names in the installed package
   - `appsettings.Development.json`: routes `docs-auth`, `docs-availability`, `docs-booking` (anonymous, `GET`, `PathSet` `/openapi/v1.json`, `RequestHeaderOriginalHost: true`); nothing in `appsettings.json`
   - Run the gateway and the three services in Development and check the `servers` each served document carries. If it is not the gateway's address, apply the Scalar-side server override of the design and note it in the header of this file
