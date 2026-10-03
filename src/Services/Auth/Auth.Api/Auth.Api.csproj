@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Auth.Application\Auth.Application.csproj" />
     <ProjectReference Include="..\Auth.Infrastructure\Auth.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\Shared\SmartAppointments.BuildingBlocks.Web\SmartAppointments.BuildingBlocks.Web.csproj" />
   </ItemGroup>
 
 </Project>

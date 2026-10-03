@@ -1,11 +1,11 @@
-﻿using Auth.Application.Commands;
+using Auth.Application.Commands;
 using Auth.Application.Models;
 using Auth.Application.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartAppointments.BuildingBlocks;
-using SmartAppointments.BuildingBlocks.Models;
+using SmartAppointments.BuildingBlocks.Web.Results;
 
 namespace Auth.Api.Controllers;
 
@@ -22,7 +22,7 @@ public class AuthController(ISender sender) : ControllerBase
 
         if (!result.IsSuccess)
         {
-            return ToErrorResult(result.Error!);
+            return this.ToActionResult(result.Error!);
         }
 
         return Ok(result.Value);
@@ -42,7 +42,7 @@ public class AuthController(ISender sender) : ControllerBase
 
         if (!result.IsSuccess)
         {
-            return ToErrorResult(result.Error!);
+            return this.ToActionResult(result.Error!);
         }
 
         return CreatedAtAction(
@@ -83,21 +83,9 @@ public class AuthController(ISender sender) : ControllerBase
 
         if (!result.IsSuccess)
         {
-            return ToErrorResult(result.Error!);
+            return this.ToActionResult(result.Error!);
         }
 
         return Ok(result.Value);
     }
-
-    // Every failure path goes through here so the status a handler chose is the status the caller
-    // sees. Branching on IsSuccess alone used to collapse 403 into 404 and 400 into 401.
-    private ObjectResult ToErrorResult(Error error) => error.Status switch
-    {
-        StatusCodes.Status400BadRequest => BadRequest(error),
-        StatusCodes.Status401Unauthorized => Unauthorized(error),
-        StatusCodes.Status403Forbidden => StatusCode(StatusCodes.Status403Forbidden, error),
-        StatusCodes.Status404NotFound => NotFound(error),
-        StatusCodes.Status409Conflict => Conflict(error),
-        _ => StatusCode(StatusCodes.Status500InternalServerError, error)
-    };
 }

@@ -1,10 +1,10 @@
-using Auth.Api.Middlewares;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using SmartAppointments.BuildingBlocks.Models;
+using SmartAppointments.BuildingBlocks.Web.Middlewares;
 using System.Text.Json;
 
-namespace Auth.Tests;
+namespace BuildingBlocks.Tests;
 
 public class ExceptionMiddlewareTests
 {
@@ -19,27 +19,29 @@ public class ExceptionMiddlewareTests
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
     }
 
+    public static TheoryData<Exception, int, string> Mappings => new()
+    {
+        { new UnauthorizedAccessException("token for user 42 expired"), StatusCodes.Status401Unauthorized, ExceptionMiddleware.UnauthorizedMessage },
+        { new BadHttpRequestException("body too large: 99MB", StatusCodes.Status413PayloadTooLarge), StatusCodes.Status413PayloadTooLarge, ExceptionMiddleware.BadRequestMessage },
+        { new BadHttpRequestException("unexpected end of request content"), StatusCodes.Status400BadRequest, ExceptionMiddleware.BadRequestMessage },
+        // These two used to be 400 with the exception message echoed back to the caller.
+        { new InvalidOperationException("Sequence contains no elements"), StatusCodes.Status500InternalServerError, ExceptionMiddleware.UnexpectedErrorMessage },
+        { new ArgumentNullException("connectionString"), StatusCodes.Status500InternalServerError, ExceptionMiddleware.UnexpectedErrorMessage },
+        { new NotSupportedException("nope"), StatusCodes.Status500InternalServerError, ExceptionMiddleware.UnexpectedErrorMessage },
+    };
+
     [Theory]
-    [InlineData(typeof(ArgumentNullException), StatusCodes.Status400BadRequest)]
-    [InlineData(typeof(InvalidOperationException), StatusCodes.Status400BadRequest)]
-    [InlineData(typeof(UnauthorizedAccessException), StatusCodes.Status401Unauthorized)]
-    [InlineData(typeof(NotSupportedException), StatusCodes.Status500InternalServerError)]
-    public async Task Exceptions_Map_To_Their_Status_Codes(Type exceptionType, int expectedStatus)
+    [MemberData(nameof(Mappings))]
+    public async Task Exceptions_Map_To_A_Status_And_A_Fixed_Message(Exception exception, int expectedStatus, string expectedDetail)
     {
-        var context = await InvokeWith((Exception)Activator.CreateInstance(exceptionType)!);
-
-        Assert.Equal(expectedStatus, context.Response.StatusCode);
-        Assert.Equal("application/problem+json", context.Response.ContentType);
-    }
-
-    [Fact]
-    public async Task A_Bad_Request_Reports_The_Exception_Message()
-    {
-        var context = await InvokeWith(new InvalidOperationException("Email is invalid."));
+        var context = await InvokeWith(exception);
 
         var problem = await ReadProblemAsync(context);
-        Assert.Equal(StatusCodes.Status400BadRequest, problem.Status);
-        Assert.Equal("Email is invalid.", problem.Detail);
+        Assert.Equal(expectedStatus, context.Response.StatusCode);
+        Assert.Equal("application/problem+json", context.Response.ContentType);
+        Assert.Equal(expectedStatus, problem.Status);
+        Assert.Equal(expectedDetail, problem.Detail);
+        Assert.NotEqual(exception.Message, problem.Detail);
     }
 
     [Fact]
@@ -51,7 +53,6 @@ public class ExceptionMiddlewareTests
 
         var problem = await ReadProblemAsync(context);
         Assert.Equal(StatusCodes.Status500InternalServerError, problem.Status);
-        Assert.Equal("An unexpected error occurred! Please try again later.", problem.Detail);
         Assert.DoesNotContain("postgres", problem.Detail);
     }
 

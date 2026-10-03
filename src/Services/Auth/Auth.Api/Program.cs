@@ -1,9 +1,10 @@
-using Auth.Api.Middlewares;
 using Auth.Application.Dependency;
 using Auth.Infrastructure.Dependency;
 using Auth.Infrastructure.Persistence;
-using Microsoft.OpenApi;
 using Scalar.AspNetCore;
+using SmartAppointments.BuildingBlocks.Web.Authentication;
+using SmartAppointments.BuildingBlocks.Web.Middlewares;
+using SmartAppointments.BuildingBlocks.Web.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +13,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddControllers();
-builder.Services.AddAuthentication(builder.Configuration);
+builder.Services.AddOpenApiWithBearerAuth();
+builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddAuthorizationWithRoles();
 
 var app = builder.Build();

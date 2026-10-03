@@ -17,10 +17,12 @@
     <Project Path="src/Services/Availability/Availability.Infrastructure/Availability.Infrastructure.csproj" Id="6b1c2d39-d7a3-4096-992b-6c60f404eeb2" />
   </Folder>
   <Folder Name="/src/Shared/">
+    <Project Path="src/Shared/SmartAppointments.BuildingBlocks.Web/SmartAppointments.BuildingBlocks.Web.csproj" />
     <Project Path="src/Shared/SmartAppointments.BuildingBlocks/SmartAppointments.BuildingBlocks.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Auth.Tests/Auth.Tests.csproj" />
     <Project Path="tests/Availability.Tests/Availability.Tests.csproj" />
+    <Project Path="tests/BuildingBlocks.Tests/BuildingBlocks.Tests.csproj" />
   </Folder>
 </Solution>
