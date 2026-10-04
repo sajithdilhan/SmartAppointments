@@ -21,7 +21,7 @@ Implementation branches from `unified-error-shape`, so errors are the camelCase 
   - `RefreshTokenTests`: expiry = now + 7 d; family id and start set; successor keeps `FamilyId` and `FamilyStartedAtUtc`; `min(sliding, cap)` for a young and an old family; null at or past the cap; `IsExpired` boundary; non-positive spans throw
   - _Requirements: 1.3, 1.4, 1.6, 2.3, 2.4_
 
-- [ ] 4. User repository fixes
+- [x] 4. User repository fixes
   - `IUserRepository.GetByIdAsync(Guid, ct)` (no-tracking) and its implementation
   - `UserRepository.IsUniqueViolation` checks `ConstraintName == "IX_Users_Email"` so a token-hash collision is not reported as a duplicate email
   - Update affected tests and mocks
