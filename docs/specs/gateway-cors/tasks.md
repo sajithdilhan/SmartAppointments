@@ -32,7 +32,7 @@
   - No route, policy or service change; the existing nine-route test stays green
   - _Requirements: 1.2, 3.2, 3.3, 3.6, 4.1, 4.4, 5.2, 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 5. In-process middleware tests
+- [x] 5. In-process middleware tests
   - `GatewayCorsMiddlewareTests`: the framework `CorsMiddleware` built from `AddGatewayCors` over a `DefaultHttpContext` and a recording `next`
   - Preflight from an allowed origin on a routed, an unrouted and an `/internal/` path: `204`, exact headers, `Vary: Origin`, no `Allow-Credentials`, `next` not called; preflight asking `PATCH` or `X-Evil`: `204` with lists that omit it, `next` not called; preflight from `https://evil.example` and `null`: `204`, no `Access-Control-*`, `next` not called; `OPTIONS` without `Origin` or without `Access-Control-Request-Method`: `next` called; actual request allowed origin: headers and `Vary`, `next` called; no `Origin`: no header and no `Vary`; other origin: no header, `next` called
   - `ExceptionMiddleware` then CORS then a throwing `next`: `500` problem body (`status`, `detail`, camelCase) that still carries `Access-Control-Allow-Origin`; a `next` setting `401`, `404`, `429` keeps the headers
