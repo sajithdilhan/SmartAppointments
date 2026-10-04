@@ -26,7 +26,7 @@
   - `DownstreamCorsHeaderTransformTests` (service `Allow-Origin: *` and `Allow-Credentials: true` removed; allowed origin keeps only the policy's headers, each once; other origin keeps none; no service header leaves the response unchanged)
   - _Requirements: 2.2, 4.2, 4.3, 5.1_
 
-- [ ] 4. Wire CORS into `Program.cs`
+- [x] 4. Wire CORS into `Program.cs`
   - `var corsOrigins = CorsOriginsValidator.Validate(builder.Configuration);` right after `ReverseProxyValidator.Validate`
   - When `corsOrigins.Count > 0`: `AddGatewayCors`, the YARP `AddTransforms` response transform calling `DownstreamCorsHeaderTransform`, and `app.UseGatewayCors()` directly after `LoggingMiddleware` and before `UseHttpsRedirection` (comment why: before everything that can answer, after correlation id and exception handling); an empty list changes nothing
   - No route, policy or service change; the existing nine-route test stays green
