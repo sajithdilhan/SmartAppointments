@@ -42,8 +42,24 @@ It closes open questions 1 and 2 in [`availability-branches/design.md`](../avail
 3. IF a `BadHttpRequestException` escapes (for example an oversized or unreadable body), THEN the system SHALL return the status code it carries with the fixed message "The request could not be read.".
 4. WHEN any exception is caught, THEN the system SHALL log it with its full detail.
 
+### Requirement 4: One error body for browser clients (no FR-ID)
+
+**User Story:** As a frontend developer, I want every failure (a handler's `Result` error, a middleware error or a gateway error) to have the same JSON body, so that the web client reads the message from one field.
+
+Today there are two shapes: controller errors serialize the `Error` record as `{"status":409,"details":"..."}` (`application/json`), while `ProblemDetailsWriter` serializes `ApiProblemDetails` with the non-web defaults as `{"Status":429,"Detail":"..."}` (`application/problem+json`). This requirement amends Requirement 2.1 and 2.2.
+
+#### Acceptance Criteria
+
+1. WHEN a controller maps a failed `Result` through `ToActionResult`, THEN the response SHALL keep the status Requirement 2.1 gives it (with `422` and `503` passed through as today) and SHALL have the body `{"status":<int>,"detail":"<Error.Details>"}` with content type `application/problem+json`.
+2. WHEN `ProblemDetailsWriter` writes a body (`ExceptionMiddleware`, the gateway's rate limiter, proxy-error and unmatched-request paths), THEN the keys SHALL be camelCase: `{"status":<int>,"detail":"..."}`.
+3. WHEN Booking replays a stored failed outcome for a repeated `Idempotency-Key`, THEN the replayed body SHALL have the shape in 4.1. Records stored before this change SHALL replay correctly with no data migration.
+4. WHERE a test asserts an error body or its content type, it SHALL assert the new shape.
+5. WHEN `[ApiController]` rejects a request during model binding or validation (a missing or malformed JSON body, an unparseable route or query value, a null body), THEN the response SHALL be `400` with the body `{"status":400,"detail":"Invalid request data. Errors: <msg1>,<msg2>"}` as `application/problem+json`, through one shared registration that every service's Api uses.
+
 ## Out of scope
 
+- **Per-field structure of model-binding errors.** Requirement 4.5 gives them the shared body, but their messages are joined into the single `detail` string, not kept as an `errors` map.
+- **Field-level validation errors.** FluentValidation messages stay joined into the single `detail` string.
 - **Gateway.** It is still a template and validates nothing. It will reference this library when it is specced.
 - **Correlation IDs, Serilog, OpenTelemetry.** The BRD wants them in week 3. They will land in this library, but not in this feature.
 - **API-key authentication.** `Constants.ApiKeyAuthenticationScheme` stays unused until the internal reserve/release endpoints need it.

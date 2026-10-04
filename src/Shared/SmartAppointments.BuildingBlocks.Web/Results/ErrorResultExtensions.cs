@@ -13,13 +13,22 @@ public static class ErrorResultExtensions
     /// </summary>
     public static ObjectResult ToActionResult(this ControllerBase controller, Error error) => error.Status switch
     {
-        StatusCodes.Status400BadRequest => controller.BadRequest(error),
-        StatusCodes.Status401Unauthorized => controller.Unauthorized(error),
-        StatusCodes.Status403Forbidden => controller.StatusCode(StatusCodes.Status403Forbidden, error),
-        StatusCodes.Status404NotFound => controller.NotFound(error),
-        StatusCodes.Status409Conflict => controller.Conflict(error),
-        StatusCodes.Status422UnprocessableEntity => controller.UnprocessableEntity(error),
-        StatusCodes.Status503ServiceUnavailable => controller.StatusCode(StatusCodes.Status503ServiceUnavailable, error),
-        _ => controller.StatusCode(StatusCodes.Status500InternalServerError, error)
+        StatusCodes.Status400BadRequest => WithProblemBody(controller.BadRequest(error), error),
+        StatusCodes.Status401Unauthorized => WithProblemBody(controller.Unauthorized(error), error),
+        StatusCodes.Status403Forbidden => WithProblemBody(controller.StatusCode(StatusCodes.Status403Forbidden, error), error),
+        StatusCodes.Status404NotFound => WithProblemBody(controller.NotFound(error), error),
+        StatusCodes.Status409Conflict => WithProblemBody(controller.Conflict(error), error),
+        StatusCodes.Status422UnprocessableEntity => WithProblemBody(controller.UnprocessableEntity(error), error),
+        StatusCodes.Status503ServiceUnavailable => WithProblemBody(controller.StatusCode(StatusCodes.Status503ServiceUnavailable, error), error),
+        _ => WithProblemBody(controller.StatusCode(StatusCodes.Status500InternalServerError, error), error)
     };
+
+    // The same {status, detail} body the middleware and the gateway write. The body carries the status
+    // the response actually has, so an unmapped one reads 500 in both places.
+    private static ObjectResult WithProblemBody(ObjectResult result, Error error)
+    {
+        result.Value = new ApiProblemDetails(result.StatusCode ?? StatusCodes.Status500InternalServerError, error.Details);
+        result.ContentTypes.Add(ProblemDetailsWriter.ContentType);
+        return result;
+    }
 }

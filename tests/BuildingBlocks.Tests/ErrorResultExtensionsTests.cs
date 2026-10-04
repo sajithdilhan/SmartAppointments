@@ -24,7 +24,9 @@ public class ErrorResultExtensionsTests
 
         Assert.IsType(expectedType, result);
         Assert.Equal(expectedStatus, result.StatusCode);
-        Assert.Same(error, result.Value);
+        var problem = Assert.IsType<ApiProblemDetails>(result.Value);
+        Assert.Equal(new ApiProblemDetails(expectedStatus, "failure"), problem);
+        Assert.Contains("application/problem+json", result.ContentTypes);
     }
 
     private sealed class TestController : ControllerBase;

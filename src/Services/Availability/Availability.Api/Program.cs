@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using SmartAppointments.BuildingBlocks.Web.Authentication;
 using SmartAppointments.BuildingBlocks.Web.Middlewares;
 using SmartAppointments.BuildingBlocks.Web.OpenApi;
+using SmartAppointments.BuildingBlocks.Web.Results;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,7 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 // DayOfWeek travels as "Monday" rather than 1.
 builder.Services.AddControllers()
+    .AddSharedProblemDetails()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApiWithBearerAuth();
 builder.Services.AddJwtAuthentication(builder.Configuration);

@@ -248,7 +248,7 @@ It is added to the **proxy pipeline** with `MapReverseProxy(proxy => proxy.UseMi
 | A response transform on every route | Transforms run per route and are configured in JSON; it would repeat on nine routes, and transforms do not run for failures before a response exists. |
 | A custom `IForwarderHttpClientFactory` or a replaced `HttpTransformer` | More surface for the same effect. |
 
-`ProblemDetailsWriter.WriteAsync(context, status, detail)` sets the status, `Content-Type: application/problem+json` and the JSON of `new ApiProblemDetails(status, detail)`, serialized exactly as `ExceptionMiddleware` does it today (`System.Text.Json` defaults, so `{"Status":502,"Detail":"..."}`); `ExceptionMiddleware` is changed to call it, with no behaviour change (its tests prove it). The details are fixed strings: no host, port or exception text, as in `ExceptionMiddleware` _(Req 4.1, 4.2)_. YARP has already logged the failure with the exception, so the middleware does not log it again. If the service is slow rather than down, the verification must show `504` after the 30 s timeout.
+`ProblemDetailsWriter.WriteAsync(context, status, detail)` sets the status, `Content-Type: application/problem+json` and the JSON of `new ApiProblemDetails(status, detail)`, serialized exactly as `ExceptionMiddleware` does it today (since the shared-web-infrastructure Requirement 4 change, `JsonSerializerOptions.Web`, so `{"status":502,"detail":"..."}`); `ExceptionMiddleware` is changed to call it, with no behaviour change (its tests prove it). The details are fixed strings: no host, port or exception text, as in `ExceptionMiddleware` _(Req 4.1, 4.2)_. YARP has already logged the failure with the exception, so the middleware does not log it again. If the service is slow rather than down, the verification must show `504` after the 30 s timeout.
 
 ### Aggregated health _(Req 8)_
 
@@ -359,7 +359,7 @@ The project owner settled the open points of the first draft. They are recorded 
 ### Things in the existing code that bear on these decisions
 
 - **There is no gateway `.http` file** (the task list said "update"); one is created.
-- **`ApiProblemDetails` serializes with default `System.Text.Json` options** (`{"Status":429,"Detail":"..."}`, PascalCase), because `ExceptionMiddleware` calls `JsonSerializer.Serialize(problem)` with no options. The gateway matches that on purpose.
+- **`ApiProblemDetails` serializes with `JsonSerializerOptions.Web`** (`{"status":429,"detail":"..."}`, camelCase), the same body controllers return for a failed `Result` (shared-web-infrastructure Requirement 4; it was PascalCase before).
 - **`LoggingMiddleware` logs only the method and path**, so it cannot leak a token.
 - **`Constants.ApiKeyHeaderName` and `AddApiKeyAuthentication` already exist**; nothing in the gateway touches them.
 - **Auth's token `Issuer` and `Audience`** are `https://localhost:7220`; the gateway copies them, as Booking does.

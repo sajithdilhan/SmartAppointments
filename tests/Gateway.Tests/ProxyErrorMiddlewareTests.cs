@@ -73,7 +73,7 @@ public class ProxyErrorMiddlewareTests
 
         Assert.Equal(StatusCodes.Status502BadGateway, context.Response.StatusCode);
         Assert.Equal("application/problem+json", context.Response.ContentType);
-        var problem = JsonSerializer.Deserialize<ApiProblemDetails>(await BodyAsync(context));
+        var problem = JsonSerializer.Deserialize<ApiProblemDetails>(await BodyAsync(context), JsonSerializerOptions.Web);
         Assert.Equal(new ApiProblemDetails(502, ProxyErrorMiddleware.UnavailableMessage), problem);
     }
 
@@ -84,7 +84,7 @@ public class ProxyErrorMiddlewareTests
 
         Assert.Equal(StatusCodes.Status504GatewayTimeout, context.Response.StatusCode);
         Assert.Equal("application/problem+json", context.Response.ContentType);
-        var problem = JsonSerializer.Deserialize<ApiProblemDetails>(await BodyAsync(context));
+        var problem = JsonSerializer.Deserialize<ApiProblemDetails>(await BodyAsync(context), JsonSerializerOptions.Web);
         Assert.Equal(new ApiProblemDetails(504, ProxyErrorMiddleware.TimeoutMessage), problem);
     }
 

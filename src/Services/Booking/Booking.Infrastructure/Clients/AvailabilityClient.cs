@@ -113,7 +113,7 @@ public sealed class AvailabilityClient(HttpClient httpClient, ILogger<Availabili
         return null;
     }
 
-    // 409 carries Availability's reason in the shared Error body; 401/403 mean our API key is wrong
+    // 409 carries Availability's reason in the shared {status, detail} body; 401/403 mean our API key is wrong
     // (a configuration fault, not the customer's); everything else, including an exhausted retry, is an outage.
     private async Task<Error> MapFailureAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
@@ -121,10 +121,10 @@ public sealed class AvailabilityClient(HttpClient httpClient, ILogger<Availabili
         {
             try
             {
-                var error = await response.Content.ReadFromJsonAsync<Error>(cancellationToken);
-                if (error is not null && !string.IsNullOrWhiteSpace(error.Details))
+                var problem = await response.Content.ReadFromJsonAsync<ApiProblemDetails>(cancellationToken);
+                if (problem is not null && !string.IsNullOrWhiteSpace(problem.Detail))
                 {
-                    return new Error(409, error.Details);
+                    return new Error(409, problem.Detail);
                 }
             }
             catch (JsonException ex)
