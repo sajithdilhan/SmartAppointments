@@ -46,7 +46,7 @@
   - `docker compose config` still renders with `WEB_ORIGIN` unset
   - _Requirements: 1.5_
 
-- [ ] 7. `SmartAppointments.Gateway.http`: the CORS section
+- [x] 7. `SmartAppointments.Gateway.http`: the CORS section
   - `@WebOrigin = http://localhost:4200` and the requests of the design's manual-check table, each with its expected result in a comment (preflights on routed, anonymous, unrouted and `/internal/` paths; `PATCH` and `x-evil`; disallowed and `null` origin; `OPTIONS` with no `Access-Control-Request-Method` giving `401`; `401`, `404`, `429`, `200`, `502` with an allowed origin; disallowed origin with a token)
   - _Requirements: 3.1, 3.2, 3.4, 3.5, 4.1, 5.1, 5.3, 5.4, 6.2, 7.4_
 
