@@ -11,7 +11,7 @@ Implementation branches from `unified-error-shape`, so errors are the camelCase 
   - Tests: `JwtOptionsTests` (accessors, default 30, `ValidateOnStart` predicate rejects a cap below the window); `ExpiresAtUtc` equals the JWT `exp` and `ValidTo` exactly with a fixed clock; refresh token decodes to 64 bytes
   - _Requirements: 1.1, 1.2, 1.8_
 
-- [ ] 2. Design-time DbContext factory (moved from `auth-identity` task 15)
+- [x] 2. Design-time DbContext factory (moved from `auth-identity` task 15)
   - `IDesignTimeDbContextFactory<ApplicationDbContext>` in `Auth.Infrastructure`, copied from Availability's/Booking's, so `dotnet ef migrations add` works with a blank connection string
   - Needed by task 5
   - _Requirements: none of this spec's; carried from `auth-identity` 5.2 (migration workflow)_
