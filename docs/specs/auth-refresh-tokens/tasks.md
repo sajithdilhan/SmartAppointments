@@ -55,7 +55,7 @@ Implementation branches from `unified-error-shape`, so errors are the camelCase 
   - `LogoutCommandHandlerTests` and `LogoutCommandValidatorTests`: current, rotated, expired and already-revoked tokens revoke the family once; unknown and empty succeed without a write; null is `400`; revoke is keyed on `FamilyId` so other families are untouched
   - _Requirements: 4.1, 4.2, 4.3, 4.6_
 
-- [ ] 10. Controller actions and OpenAPI
+- [x] 10. Controller actions and OpenAPI
   - `AuthController.Refresh` and `Logout` (`[AllowAnonymous]`, `ToActionResult` on failure, `Ok(TokenResponse)` / `NoContent()`); `ProducesResponseType` attributes on both and the `200` type on `Login`
   - `AuthControllerTests`: `OkObjectResult` carrying the response; failed results map through `ToActionResult`; `NoContentResult`; both actions allow anonymous (reflection)
   - Model-binding `400`s are expected in the `{status, detail}` shape from `shared-web-infrastructure` Requirement 4.5; add a test only if that shared factory is already on the branch

@@ -3,8 +3,11 @@ using Auth.Application.Commands;
 using Auth.Application.Models;
 using Auth.Application.Queries;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Routing;
+using System.Reflection;
 using Moq;
 using SmartAppointments.BuildingBlocks;
 using SmartAppointments.BuildingBlocks.Enums;
@@ -267,6 +270,76 @@ public class AuthControllerTests
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refresh_Successful_Returns_Ok_With_The_Response()
+    {
+        var response = new TokenResponse("new-access", "new-refresh", new DateTime(2026, 10, 4, 13, 0, 0, DateTimeKind.Utc));
+        var mockSender = new Mock<ISender>();
+        mockSender.Setup(s => s.Send(It.Is<RefreshTokenCommand>(c => c.RefreshToken == "old-refresh"), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<TokenResponse>.Success(response));
+        var subject = new AuthController(mockSender.Object);
+
+        var result = await subject.Refresh(new RefreshTokenRequest("old-refresh"), CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Same(response, ok.Value);
+    }
+
+    [Theory]
+    [InlineData(401)]
+    [InlineData(400)]
+    public async Task Refresh_Failure_Maps_Through_ToActionResult(int status)
+    {
+        var mockSender = new Mock<ISender>();
+        mockSender.Setup(s => s.Send(It.IsAny<RefreshTokenCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<TokenResponse>.Failure(new Error(status, "failed")));
+        var subject = new AuthController(mockSender.Object);
+
+        var result = await subject.Refresh(new RefreshTokenRequest("token"), CancellationToken.None);
+
+        Assert.Equal(status, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
+    }
+
+    [Fact]
+    public async Task Logout_Successful_Returns_NoContent()
+    {
+        var mockSender = new Mock<ISender>();
+        mockSender.Setup(s => s.Send(It.Is<LogoutCommand>(c => c.RefreshToken == "token"), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<Unit>.Success(Unit.Value));
+        var subject = new AuthController(mockSender.Object);
+
+        var result = await subject.Logout(new LogoutRequest("token"), CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task Logout_Failure_Returns_BadRequest()
+    {
+        var mockSender = new Mock<ISender>();
+        mockSender.Setup(s => s.Send(It.IsAny<LogoutCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<Unit>.Failure(new Error(400, "Invalid request: Refresh token is required.")));
+        var subject = new AuthController(mockSender.Object);
+
+        var result = await subject.Logout(new LogoutRequest(null), CancellationToken.None);
+
+        Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
+    }
+
+    [Theory]
+    [InlineData(nameof(AuthController.Refresh), "refresh")]
+    [InlineData(nameof(AuthController.Logout), "logout")]
+    public void Refresh_And_Logout_Are_Anonymous_Post_Routes(string action, string template)
+    {
+        var method = typeof(AuthController).GetMethod(action)!;
+
+        Assert.NotNull(method.GetCustomAttribute<AllowAnonymousAttribute>());
+        Assert.Null(method.GetCustomAttribute<AuthorizeAttribute>());
+        var http = Assert.Single(method.GetCustomAttributes<HttpMethodAttribute>());
+        Assert.IsType<HttpPostAttribute>(http);
+        Assert.Equal(template, http.Template);
     }
 
     //Set up a mock HttpContext with a user for testing purposes
