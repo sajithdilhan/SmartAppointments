@@ -11,7 +11,7 @@
   - `MyAppointmentsParametersTests` and `ListMyAppointmentsQueryValidatorTests` (each rule alone, several failures at once)
   - _Requirements: 2.1, 2.2, 2.4, 3.3, 3.4, 3.7_
 
-- [ ] 2. Repository abstraction and implementation
+- [x] 2. Repository abstraction and implementation
   - `AppointmentPage(Items, TotalCount)` and `IAppointmentRepository.ListForCustomerAsync(customerId, status, when, nowUtc, page, pageSize, ct)`
   - `AppointmentRepository.ListForCustomerAsync`: no tracking, always filter on `CustomerId`, optional status and time filters (`>= now` upcoming, `< now` past), `CountAsync`, `long` skip with the `skip >= total` early return, order by `StartUtc` asc (upcoming) or desc then `Id` asc, `Skip`/`Take`. No migration and no `OnModelCreating` change
   - Any existing test double implementing `IAppointmentRepository` is updated so the solution still builds
