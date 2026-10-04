@@ -14,7 +14,7 @@
   - `CorsOriginsValidatorTests` (accepted: with and without port, `http` and `https`, IPv6; empty and absent list; blank and whitespace dropped; duplicates collapsed; every rejected form; index in the message) and `CorsConfigurationTests` (empty in `appsettings.json`, exactly the two origins in Development, both pass the validator)
   - _Requirements: 1.1, 1.2, 1.3, 1.5, 1.6, 7.1, 7.2_
 
-- [ ] 2. `GatewayCors`: the fixed policy
+- [x] 2. `GatewayCors`: the fixed policy
   - `Cors/GatewayCors` with `PolicyName`, the named constants for methods, request headers, exposed headers and max-age, `BuildPolicy` (ordinal `SetIsOriginAllowed`, no credentials, no wildcard API), `AddGatewayCors` and `UseGatewayCors`
   - `GatewayCorsPolicyTests` through `ICorsPolicyProvider` (methods, headers, exposed headers, max-age, no credentials, no any-origin/method/header, exact-match cases `https://localhost:4200`, `http://localhost:4201`, `http://localhost:4200.evil.example`, upper case, `null`, `*`, empty)
   - _Requirements: 1.4, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 5.4, 7.3_
