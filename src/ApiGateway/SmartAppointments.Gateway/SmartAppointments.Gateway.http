@@ -151,6 +151,12 @@ Authorization: Bearer {{CustomerToken}}
 
 ###
 
+# Customers only; filters status (Booked, Cancelled), when (upcoming, past), page, pageSize. Not rate limited.
+GET {{Gateway_HostAddress}}/api/appointments/my?status=Booked&when=upcoming
+Authorization: Bearer {{CustomerToken}}
+
+###
+
 # ---- Edge authentication: the gateway answers 401 with WWW-Authenticate: Bearer, no service is called ----
 
 GET {{Gateway_HostAddress}}/api/branches

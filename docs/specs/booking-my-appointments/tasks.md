@@ -31,7 +31,7 @@
 
 ## Chunk C — Documentation and end-to-end check
 
-- [ ] 5. Documentation and request samples
+- [x] 5. Documentation and request samples
   - `CLAUDE.md`: extend the Booking bullet with `GET /api/appointments/my` (customers; `status`, `when`, `page`, `pageSize`; `{items, page, pageSize, totalCount}`; reuses `IX_Appointments_CustomerId_StartUtc`) and add the spec to the Booking spec pointer
   - `docs/specs/README.md`: add a "Booking my appointments" row (FR-BKG-003, links to the three documents) and change the "not yet specced" line to drop `FR-BKG-003`
   - `src/Services/Booking/Booking.Api/Booking.Api.http`: samples for the default list, `status=Booked&when=upcoming`, `when=past&page=2&pageSize=5`, and an invalid one (`status=Completed&page=0`)

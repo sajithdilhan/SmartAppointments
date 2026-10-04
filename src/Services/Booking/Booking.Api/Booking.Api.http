@@ -46,3 +46,27 @@ Authorization: Bearer {{CustomerToken}}
 
 POST {{Booking.Api_HostAddress}}/api/appointments/{{AppointmentId}}/cancel
 Authorization: Bearer {{AdminToken}}
+
+###
+
+# The caller's own appointments (customers only; Staff and Admin get 403). Defaults: page 1, pageSize 20.
+GET {{Booking.Api_HostAddress}}/api/appointments/my
+Authorization: Bearer {{CustomerToken}}
+
+###
+
+# Active appointments that have not started yet, soonest first.
+GET {{Booking.Api_HostAddress}}/api/appointments/my?status=Booked&when=upcoming
+Authorization: Bearer {{CustomerToken}}
+
+###
+
+# History, most recent first, five per page. A page past the last is 200 with empty items.
+GET {{Booking.Api_HostAddress}}/api/appointments/my?when=past&page=2&pageSize=5
+Authorization: Bearer {{CustomerToken}}
+
+###
+
+# Invalid: one 400 naming both parameters.
+GET {{Booking.Api_HostAddress}}/api/appointments/my?status=Completed&page=0
+Authorization: Bearer {{CustomerToken}}
