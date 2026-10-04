@@ -34,7 +34,7 @@ Implementation branches from `unified-error-shape`, so errors are the camelCase 
   - No automated SQL test (no database harness); covered by task 14
   - _Requirements: 1.5, 2.2, 2.7, 3.2_
 
-- [ ] 6. Hash abstraction
+- [x] 6. Hash abstraction
   - `IRefreshTokenHasher` in `Application/Abstractions`; `RefreshTokenHasher` in `Infrastructure/Services` (SHA-256 of the UTF-8 bytes, lower-case hex), registered scoped
   - `RefreshTokenHasherTests`: deterministic, 64 hex characters, output does not contain the input, different inputs differ
   - _Requirements: 1.3, 1.4_
