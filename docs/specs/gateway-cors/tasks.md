@@ -21,7 +21,7 @@
 
 ## Chunk B — The pipeline
 
-- [ ] 3. Downstream header guard
+- [x] 3. Downstream header guard
   - `Cors/DownstreamCorsHeaderTransform.Apply(HttpContext, HttpResponseMessage?, ICorsService, CorsPolicy)`: remove the `Access-Control-*` names the proxied response carried from the outgoing response, then re-apply the policy when the request's origin is allowed; no-op when the proxied response has none
   - `DownstreamCorsHeaderTransformTests` (service `Allow-Origin: *` and `Allow-Credentials: true` removed; allowed origin keeps only the policy's headers, each once; other origin keeps none; no service header leaves the response unchanged)
   - _Requirements: 2.2, 4.2, 4.3, 5.1_
