@@ -57,7 +57,7 @@
   - Record what was run and what was not at the top of this file, as in `api-gateway/tasks.md`
   - _Requirements: 1.2, 1.3, 1.5, 3.1, 3.2, 3.3, 3.6, 4.1, 4.4, 5.1, 5.3, 6.2, 7.4_
 
-- [ ] 9. Documentation
+- [x] 9. Documentation
   - `CLAUDE.md`: the gateway bullet (CORS from `Cors:AllowedOrigins`, exact origins, preflight answered before auth and rate limits, no credentials, the pipeline position) and the "Local settings and secrets" section (`Cors:AllowedOrigins` empty in `appsettings.json`, the two origins in Development, `Cors__AllowedOrigins__<index>`, compose `WEB_ORIGIN`)
   - `docs/specs/README.md`: an index row for `gateway-cors` (Implemented, no FR-ID, links to the three documents)
   - `docs/specs/api-gateway/requirements.md`: the "Out of scope" CORS line now points to this spec
