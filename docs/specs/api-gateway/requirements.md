@@ -192,7 +192,7 @@ Services keep validating the tokens they receive. The gateway's check is an earl
 - **Shared rate-limit counters** across gateway instances (Redis).
 - **Load balancing, retries, caching, circuit breaking and YARP health checks at the gateway.** One destination per cluster; Booking already retries and breaks circuits on its own call to Availability.
 - **Trusting `X-Forwarded-For`** or any forwarded-headers handling. The gateway is the edge. If a load balancer is put in front of it later, that is a deliberate change with a trusted-proxy list.
-- **CORS** for browser clients. `Constants.AllowedOriginsPolicy` is a role policy, not CORS; a front end needs its own spec.
+- **CORS** for browser clients: specified and built in [`gateway-cors`](../gateway-cors/requirements.md). `Constants.AllowedOriginsPolicy` is a role policy, not CORS.
 - **A single merged OpenAPI document** for all services, and any documentation outside Development. The gateway's Scalar UI lists the three services' documents side by side (Requirement 10).
 - **TLS to the services.** Destinations are `http://`; TLS terminates at the gateway (Requirement 9).
 - **Docker Compose**, container images and reverse-proxy deployment. The configuration is shaped to allow environment overrides (Requirement 1.6) and nothing more.
