@@ -27,7 +27,7 @@ Implementation branches from `unified-error-shape`, so errors are the camelCase 
   - Update affected tests and mocks
   - _Requirements: 2.1, 2.2, 2.5, 2.6_
 
-- [ ] 5. Persistence for refresh tokens
+- [x] 5. Persistence for refresh tokens
   - `RefreshTokens` DbSet and configuration in `ApplicationDbContext`: `TokenHash` required, max 64, unique index; index on `FamilyId`; required timestamps; cascade FK to `Users`; no FK on `ReplacedById`
   - `IRefreshTokenRepository` (`AddAsync`, `GetByHashAsync`, `TryRotateAsync`, `RevokeFamilyAsync`) in `Application/Abstractions`; `RefreshTokenRepository` per the design (update before insert in one transaction, conditional `ExecuteUpdate` on `RevokedAtUtc IS NULL`, detach the successor); register it scoped
   - `AddRefreshTokens` migration (`dotnet ef migrations add AddRefreshTokens ...`), reviewed against the design's column list; model snapshot updated
