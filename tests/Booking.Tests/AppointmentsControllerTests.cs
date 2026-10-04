@@ -120,6 +120,7 @@ public class AppointmentsControllerTests
         var controller = Controller(sub, withSub: withSub);
 
         Assert.IsType<UnauthorizedObjectResult>(await controller.Create("k", new CreateAppointmentRequest(SlotId), CancellationToken.None));
+        Assert.IsType<UnauthorizedObjectResult>(await controller.GetMine(null, null, null, null, CancellationToken.None));
         Assert.IsType<UnauthorizedObjectResult>(await controller.GetById(Guid.CreateVersion7(), CancellationToken.None));
         Assert.IsType<UnauthorizedObjectResult>(await controller.Cancel(Guid.CreateVersion7(), CancellationToken.None));
         _sender.VerifyNoOtherCalls();
@@ -170,8 +171,83 @@ public class AppointmentsControllerTests
         Assert.Equal(expected, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
     }
 
+    [Fact]
+    public async Task GetMine_Successful_Returns_Ok_With_The_Page()
+    {
+        var page = new PagedResponse<AppointmentResponse>([Response()], 1, 20, 1);
+        _sender.Setup(s => s.Send(It.IsAny<ListMyAppointmentsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PagedResponse<AppointmentResponse>>.Success(page));
+
+        var result = await Controller().GetMine(null, null, null, null, CancellationToken.None);
+
+        Assert.Same(page, Assert.IsType<OkObjectResult>(result).Value);
+    }
+
+    [Fact]
+    public async Task GetMine_Sends_The_Sub_And_The_Raw_Query_Strings_Unchanged()
+    {
+        _sender.Setup(s => s.Send(It.IsAny<ListMyAppointmentsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PagedResponse<AppointmentResponse>>.Success(new([], 1, 20, 0)));
+
+        await Controller().GetMine("booked", "", "abc", "0", CancellationToken.None);
+
+        _sender.Verify(s => s.Send(
+            new ListMyAppointmentsQuery(UserId, "booked", "", "abc", "0"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("?status=", "", null, null, null)]
+    [InlineData("?when=&page=", null, "", "", null)]
+    [InlineData("?pageSize=", null, null, null, "")]
+    [InlineData("", null, null, null, null)]
+    public async Task GetMine_Keeps_An_Empty_Query_Value_Empty_And_An_Omitted_One_Null(
+        string queryString, string? status, string? when, string? page, string? pageSize)
+    {
+        _sender.Setup(s => s.Send(It.IsAny<ListMyAppointmentsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PagedResponse<AppointmentResponse>>.Success(new([], 1, 20, 0)));
+        var controller = Controller();
+        controller.HttpContext.Request.QueryString = new QueryString(queryString);
+
+        // MVC binds an empty value to null, so the action is called with null for it as well.
+        await controller.GetMine(null, null, null, null, CancellationToken.None);
+
+        _sender.Verify(s => s.Send(
+            new ListMyAppointmentsQuery(UserId, status, when, page, pageSize),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetMine_Failure_400_Maps_To_400()
+    {
+        _sender.Setup(s => s.Send(It.IsAny<ListMyAppointmentsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PagedResponse<AppointmentResponse>>.Failure(new Error(400, "bad")));
+
+        var result = await Controller().GetMine("x", null, null, null, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public void GetMine_Is_Routed_As_My_And_GetById_Is_Unchanged()
+    {
+        Assert.Equal("my", typeof(AppointmentsController).GetMethod(nameof(AppointmentsController.GetMine))!
+            .GetCustomAttribute<HttpGetAttribute>()!.Template);
+        Assert.Equal("{id:guid}", typeof(AppointmentsController).GetMethod(nameof(AppointmentsController.GetById))!
+            .GetCustomAttribute<HttpGetAttribute>()!.Template);
+    }
+
+    [Fact]
+    public void GetMine_Takes_No_Customer_Id()
+    {
+        var names = typeof(AppointmentsController).GetMethod(nameof(AppointmentsController.GetMine))!
+            .GetParameters().Select(p => p.Name);
+
+        Assert.DoesNotContain(names, n => string.Equals(n, "customerId", StringComparison.OrdinalIgnoreCase));
+    }
+
     [Theory]
     [InlineData(nameof(AppointmentsController.Create), Constants.CustomerPolicy)]
+    [InlineData(nameof(AppointmentsController.GetMine), Constants.CustomerPolicy)]
     [InlineData(nameof(AppointmentsController.GetById), Constants.AllowedOriginsPolicy)]
     [InlineData(nameof(AppointmentsController.Cancel), Constants.AllowedOriginsPolicy)]
     public void Each_Action_Carries_Its_Policy(string action, string policy)

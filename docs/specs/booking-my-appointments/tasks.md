@@ -24,7 +24,7 @@
 
 ## Chunk B — API
 
-- [ ] 4. `GetMine` action
+- [x] 4. `GetMine` action
   - `GET /api/appointments/my` on `AppointmentsController`, above `GetById`: `CustomerPolicy`, `string?` parameters `status`, `when`, `page`, `pageSize` each with `[FromQuery, DisplayFormat(ConvertEmptyStringToNull = false)]`, no `customerId`; `TryGetCaller` then `Unauthorised()` on a bad `sub`; failures through `this.ToActionResult`; success `Ok(result.Value)`; XML summary
   - Additions to `AppointmentsControllerTests`: `200` with the page, the query carries the `sub` and the four raw strings, `400` mapping, missing and non-GUID `sub` → `401` with no `Send`, reflection for `[HttpGet("my")]` and `CustomerPolicy`, `GetById` still `[HttpGet("{id:guid}")]`, no parameter named `customerId`
   - _Requirements: 1.1–1.3, 2.4, 4.1–4.3, 4.5_

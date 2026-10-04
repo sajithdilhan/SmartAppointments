@@ -231,3 +231,5 @@ The project owner approved the design and settled the four questions as follows.
 4. The `","` join of validation messages is kept, so every `400` in the service reads alike.
 
 **Related change in `shared-web-infrastructure` (Requirement 4.5).** Model-binding failures elsewhere become `{status: 400, detail: "Invalid request data. Errors: ..."}` `application/problem+json` through a shared `InvalidModelStateResponseFactory`. This endpoint's string-binding approach stays: it cannot fail binding, so its single `400` listing every failed rule still comes from the validator, and it needs nothing from that factory.
+
+**Implementation note.** `DisplayFormat` is not valid on a method parameter (compile error CS0592), so the action could not use it. It keeps the four `[FromQuery] string?` parameters, and a private `Raw(name, bound)` turns a `null` that came from a present-but-empty value (`Request.Query.ContainsKey(name)`) back into `""`. An omitted parameter stays `null`, and the OpenAPI parameter list is kept. The manual check of empty values still applies.
