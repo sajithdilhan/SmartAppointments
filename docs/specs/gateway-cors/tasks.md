@@ -8,7 +8,7 @@
 
 ## Chunk A — Origins and policy
 
-- [ ] 1. `CorsOriginsValidator` and the shipped configuration
+- [x] 1. `CorsOriginsValidator` and the shipped configuration
   - `Configuration/CorsOriginsValidator.Validate(IConfiguration)` returning `IReadOnlyList<string>`: skip null, empty and whitespace entries, collapse ordinal duplicates, reject per the design's rule table (wildcard, not absolute, scheme, user information, query or fragment, non-canonical form including any path, trailing slash, upper case, default port), message naming `Cors:AllowedOrigins:{index}` and `Cors__AllowedOrigins__{index}`
   - `"Cors": { "AllowedOrigins": [] }` in `appsettings.json`; `http://localhost:4200` and `http://localhost:8081` in `appsettings.Development.json`
   - `CorsOriginsValidatorTests` (accepted: with and without port, `http` and `https`, IPv6; empty and absent list; blank and whitespace dropped; duplicates collapsed; every rejected form; index in the message) and `CorsConfigurationTests` (empty in `appsettings.json`, exactly the two origins in Development, both pass the validator)
