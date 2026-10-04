@@ -16,7 +16,7 @@ Implementation branches from `unified-error-shape`, so errors are the camelCase 
   - Needed by task 5
   - _Requirements: none of this spec's; carried from `auth-identity` 5.2 (migration workflow)_
 
-- [ ] 3. `RefreshToken` entity
+- [x] 3. `RefreshToken` entity
   - `Auth.Domain/Entities/RefreshToken.cs` per the Data model: private setters, `StartFamily`, `CreateSuccessor` (null at the cap), `IsRevoked`, `IsExpired`
   - `RefreshTokenTests`: expiry = now + 7 d; family id and start set; successor keeps `FamilyId` and `FamilyStartedAtUtc`; `min(sliding, cap)` for a young and an old family; null at or past the cap; `IsExpired` boundary; non-positive spans throw
   - _Requirements: 1.3, 1.4, 1.6, 2.3, 2.4_
