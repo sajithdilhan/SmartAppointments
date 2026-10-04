@@ -1,4 +1,5 @@
 using Booking.Application.Commands;
+using Booking.Application.Queries;
 using Booking.Application.Validations;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,7 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
         services.AddScoped<IValidator<CreateAppointmentCommand>, CreateAppointmentCommandValidator>();
+        services.AddScoped<IValidator<ListMyAppointmentsQuery>, ListMyAppointmentsQueryValidator>();
         return services;
     }
 }

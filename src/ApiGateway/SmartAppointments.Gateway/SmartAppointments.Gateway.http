@@ -173,6 +173,12 @@ Authorization: Bearer {{CustomerToken}}
 
 ###
 
+# Customers only; filters status (Booked, Cancelled), when (upcoming, past), page, pageSize. Not rate limited.
+GET {{Gateway_HostAddress}}/api/appointments/my?status=Booked&when=upcoming
+Authorization: Bearer {{CustomerToken}}
+
+###
+
 # ---- Edge authentication: the gateway answers 401 with WWW-Authenticate: Bearer, no service is called ----
 
 GET {{Gateway_HostAddress}}/api/branches
@@ -219,5 +225,131 @@ GET {{Gateway_HostAddress}}/openapi/availability/v1.json
 ###
 
 GET {{Gateway_HostAddress}}/openapi/booking/v1.json
+
+###
+
+# ---- CORS (Cors:AllowedOrigins; Development allows http://localhost:4200 and http://localhost:8081) ----
+# A preflight from an allowed origin is answered by the gateway with 204 before authentication, rate limits and
+# routing, so no token is needed and no service is called (check Availability's log for the /internal/ one).
+# Every answer carries X-Correlation-ID.
+
+@WebOrigin = http://localhost:4200
+
+# Expected: 204; Access-Control-Allow-Origin = the origin, Allow-Methods GET,POST,PUT,DELETE,
+# Allow-Headers Authorization,Content-Type,Idempotency-Key,X-Correlation-ID, Max-Age 600, Vary: Origin;
+# no Access-Control-Allow-Credentials.
+OPTIONS {{Gateway_HostAddress}}/api/appointments
+Origin: {{WebOrigin}}
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: authorization,idempotency-key,content-type
+
+###
+
+# Expected: 204 with the same headers (an anonymous route).
+OPTIONS {{Gateway_HostAddress}}/api/auth/login
+Origin: {{WebOrigin}}
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: content-type
+
+###
+
+# Expected: 204, not 404 (a path that is not routed).
+OPTIONS {{Gateway_HostAddress}}/nothing
+Origin: {{WebOrigin}}
+Access-Control-Request-Method: GET
+
+###
+
+# Expected: 204, not 404, and nothing in Availability's log (/internal/** is never routed).
+OPTIONS {{Gateway_HostAddress}}/internal/slots/{{SlotId}}
+Origin: {{WebOrigin}}
+Access-Control-Request-Method: POST
+
+###
+
+# Expected: 204 whose Allow-Methods lacks PATCH; the browser would block the real request.
+OPTIONS {{Gateway_HostAddress}}/api/appointments/{{AppointmentId}}
+Origin: {{WebOrigin}}
+Access-Control-Request-Method: PATCH
+
+###
+
+# Expected: 204 whose Allow-Headers lacks x-evil.
+OPTIONS {{Gateway_HostAddress}}/api/appointments
+Origin: {{WebOrigin}}
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: x-evil
+
+###
+
+# Expected: 204 with no Access-Control-* header and no Vary (origin not allowed).
+OPTIONS {{Gateway_HostAddress}}/api/appointments
+Origin: https://evil.example
+Access-Control-Request-Method: POST
+
+###
+
+# Expected: 204 with no Access-Control-* header (the null origin is never allowed).
+OPTIONS {{Gateway_HostAddress}}/api/appointments
+Origin: null
+Access-Control-Request-Method: POST
+
+###
+
+# Expected: 401 (not a preflight: no Access-Control-Request-Method), with Allow-Origin.
+OPTIONS {{Gateway_HostAddress}}/api/appointments
+Origin: {{WebOrigin}}
+
+###
+
+# Expected: 401 with Allow-Origin, Expose-Headers (X-Correlation-ID,Retry-After,Location) and Vary: Origin.
+GET {{Gateway_HostAddress}}/api/branches
+Origin: {{WebOrigin}}
+
+###
+
+# Expected: 404 with Allow-Origin.
+GET {{Gateway_HostAddress}}/api/queue/x
+Origin: {{WebOrigin}}
+
+###
+
+# Expected: 200 with Allow-Origin, Expose-Headers and the unchanged body.
+GET {{Gateway_HostAddress}}/api/branches
+Origin: {{WebOrigin}}
+Authorization: Bearer {{CustomerToken}}
+
+###
+
+# Expected: 200 with Allow-Origin and the unchanged body.
+GET {{Gateway_HostAddress}}/healthz
+Origin: {{WebOrigin}}
+
+###
+
+# Expected: 200 and no Access-Control-* header (origin not allowed, nothing rejected).
+GET {{Gateway_HostAddress}}/api/branches
+Origin: https://evil.example
+Authorization: Bearer {{CustomerToken}}
+
+###
+
+# Expected with Booking stopped: 502 (problem+json) with Allow-Origin.
+GET {{Gateway_HostAddress}}/api/appointments/{{AppointmentId}}
+Origin: {{WebOrigin}}
+Authorization: Bearer {{CustomerToken}}
+
+###
+
+# Rate limit: send this six times within a minute. Expected: the 6th is 429 with Allow-Origin and Retry-After.
+# Ten preflights to /api/auth/login beforehand leave all five attempts available (a preflight costs no permit).
+POST {{Gateway_HostAddress}}/api/auth/login
+Origin: {{WebOrigin}}
+Content-Type: application/json
+
+{
+  "email": "nobody@example.com",
+  "password": "wrong"
+}
 
 ###

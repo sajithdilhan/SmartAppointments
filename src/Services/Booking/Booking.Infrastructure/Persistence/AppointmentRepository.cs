@@ -1,4 +1,5 @@
 using Booking.Application.Abstractions;
+using Booking.Application.Models;
 using Booking.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -55,6 +56,45 @@ public class AppointmentRepository(ApplicationDbContext context) : IAppointmentR
 
         await transaction.CommitAsync(cancellationToken);
         return AddAppointmentOutcome.Saved;
+    }
+
+    public async Task<AppointmentPage> ListForCustomerAsync(
+        Guid customerId, AppointmentStatus? status, AppointmentTimeFilter? when, DateTime nowUtc,
+        int page, int pageSize, CancellationToken cancellationToken)
+    {
+        // Served by IX_Appointments_CustomerId_StartUtc; the Id tie-break is finished by an incremental sort.
+        var query = context.Appointments.AsNoTracking().Where(a => a.CustomerId == customerId);
+        if (status is { } s)
+        {
+            query = query.Where(a => a.Status == s);
+        }
+
+        // An appointment starting exactly at "now" is upcoming, never both or neither.
+        if (when == AppointmentTimeFilter.Upcoming)
+        {
+            query = query.Where(a => a.StartUtc >= nowUtc);
+        }
+        else if (when == AppointmentTimeFilter.Past)
+        {
+            query = query.Where(a => a.StartUtc < nowUtc);
+        }
+
+        var total = await query.CountAsync(cancellationToken);
+
+        // A long, because page can be up to int.MaxValue. Past the end there is nothing to read, and
+        // once this passes skip < total, so the int cast below is safe.
+        var skip = (long)(page - 1) * pageSize;
+        if (skip >= total)
+        {
+            return new AppointmentPage([], total);
+        }
+
+        var ordered = when == AppointmentTimeFilter.Upcoming
+            ? query.OrderBy(a => a.StartUtc).ThenBy(a => a.Id)
+            : query.OrderByDescending(a => a.StartUtc).ThenBy(a => a.Id);
+
+        var items = await ordered.Skip((int)skip).Take(pageSize).ToListAsync(cancellationToken);
+        return new AppointmentPage(items, total);
     }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken)
