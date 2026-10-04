@@ -34,6 +34,28 @@ Content-Type: application/json
 
 ###
 
+# Refresh and logout need no Authorization header: the refresh token is the credential.
+# A refresh token is single use. The 11th refresh within a minute from one address is 429, and
+# replaying a token that was already redeemed is 401 and revokes the whole session (family).
+POST {{Gateway_HostAddress}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "<paste refreshToken from login>"
+}
+
+###
+
+# Idempotent: 204 for any token, known or not. Access tokens already issued live until they expire.
+POST {{Gateway_HostAddress}}/api/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "<paste refreshToken from login>"
+}
+
+###
+
 # ---- Correlation id ----------------------------------------------------------------------------
 
 # A good value is echoed once on the response; a malformed one (a space, over 64 characters) is replaced.

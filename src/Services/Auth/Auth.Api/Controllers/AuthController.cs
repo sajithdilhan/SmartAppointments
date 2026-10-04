@@ -5,6 +5,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartAppointments.BuildingBlocks;
+using SmartAppointments.BuildingBlocks.Models;
 using SmartAppointments.BuildingBlocks.Web.Results;
 
 namespace Auth.Api.Controllers;
@@ -14,6 +15,7 @@ namespace Auth.Api.Controllers;
 public class AuthController(ISender sender) : ControllerBase
 {
     [HttpPost("login")]
+    [ProducesResponseType<TokenResponse>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Login(UserLoginRequest loginRequest)
     {
         var command = new LoginUserCommand(loginRequest.Email, loginRequest.Password);
@@ -26,6 +28,51 @@ public class AuthController(ISender sender) : ControllerBase
         }
 
         return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Exchanges a refresh token for a new access token and a new refresh token. The presented token
+    /// is spent; presenting it again revokes the whole session. Anonymous: the refresh token is the credential.
+    /// </summary>
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    [ProducesResponseType<TokenResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Refresh(RefreshTokenRequest refreshRequest, CancellationToken cancellationToken)
+    {
+        var command = new RefreshTokenCommand(refreshRequest.RefreshToken);
+
+        var result = await sender.Send(command, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return this.ToActionResult(result.Error!);
+        }
+
+        return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Ends the session the refresh token belongs to. Idempotent: an unknown or already revoked token
+    /// is still 204. Access tokens already issued stay valid until they expire.
+    /// </summary>
+    [HttpPost("logout")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Logout(LogoutRequest logoutRequest, CancellationToken cancellationToken)
+    {
+        var command = new LogoutCommand(logoutRequest.RefreshToken);
+
+        var result = await sender.Send(command, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return this.ToActionResult(result.Error!);
+        }
+
+        return NoContent();
     }
 
     [HttpPost("register")]

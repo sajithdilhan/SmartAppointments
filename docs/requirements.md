@@ -154,6 +154,8 @@ Service-based organizations such as clinics, salons, vehicle service centers, go
 | FR-AUTH-001 | Register Customer | The system shall allow customers to register using full name, email, phone number, and password. |
 | FR-AUTH-002 | Login | The system shall authenticate users and issue JWT access tokens. |
 | FR-AUTH-003 | Role-Based Access | The system shall restrict APIs based on Customer, Staff, and Admin roles. |
+| FR-AUTH-004 | Refresh Token | The system shall let a signed-in user exchange a single-use refresh token for a new access token and refresh token, and shall revoke the whole token family when a rotated token is presented again. |
+| FR-AUTH-005 | Logout | The system shall let a user end a session by revoking the refresh token family the presented token belongs to. |
 
 ### Availability Management
 
@@ -287,6 +289,8 @@ reporting_db
 ```http
 POST /api/auth/register
 POST /api/auth/login
+POST /api/auth/refresh
+POST /api/auth/logout
 GET  /api/auth/me
 ```
 

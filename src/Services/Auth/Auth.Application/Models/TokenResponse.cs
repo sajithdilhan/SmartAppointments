@@ -1,4 +1,3 @@
-﻿namespace Auth.Application.Models;
+namespace Auth.Application.Models;
 
-public sealed record TokenResponse(string AccessToken, string RefreshToken);
-
+public sealed record TokenResponse(string AccessToken, string RefreshToken, DateTime AccessTokenExpiresAtUtc);

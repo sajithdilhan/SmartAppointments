@@ -1,10 +1,12 @@
 using Auth.Application.Abstractions;
 using Auth.Application.Commands;
 using Auth.Application.Handlers;
+using Auth.Application.Models;
 using Auth.Application.Validations;
 using Auth.Domain.Entities;
 using Auth.Domain.ValueObjects;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using SmartAppointments.BuildingBlocks.Enums;
 
@@ -29,6 +31,7 @@ public class LoginUserHandlerTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal("access-token", result.Value!.AccessToken);
+        Assert.Equal(new DateTime(2026, 10, 4, 13, 0, 0, DateTimeKind.Utc), result.Value.AccessTokenExpiresAtUtc);
     }
 
     [Fact]
@@ -81,21 +84,123 @@ public class LoginUserHandlerTests
         repository.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    private static LoginUserHandler CreateSubject(Mock<IUserRepository> repository)
+    [Fact]
+    public async Task Successful_Login_Stages_One_Family_And_Saves_Once()
+    {
+        var user = CreateUser(UserRole.Customer);
+        var repository = CreateRepository(user);
+        var refreshTokens = new Mock<IRefreshTokenRepository>();
+        RefreshToken? staged = null;
+        refreshTokens.Setup(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
+            .Callback<RefreshToken, CancellationToken>((t, _) => staged = t)
+            .Returns(Task.CompletedTask);
+
+        var result = await CreateSubject(repository, refreshTokens).Handle(new LoginUserCommand(user.Email.Value, Password), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("refresh-token", result.Value!.RefreshToken);
+        refreshTokens.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        Assert.NotNull(staged);
+        Assert.Equal(user.Id, staged.UserId);
+        Assert.Equal("hash-of-refresh-token", staged.TokenHash);
+        Assert.Equal(Now, staged.CreatedAtUtc);
+        Assert.Equal(Now, staged.FamilyStartedAtUtc);
+        Assert.Equal(Now.AddDays(7), staged.ExpiresAtUtc);
+    }
+
+    [Fact]
+    public async Task A_Second_Login_Starts_A_Different_Family()
+    {
+        var user = CreateUser(UserRole.Customer);
+        var repository = CreateRepository(user);
+        var refreshTokens = new Mock<IRefreshTokenRepository>();
+        var staged = new List<RefreshToken>();
+        refreshTokens.Setup(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
+            .Callback<RefreshToken, CancellationToken>((t, _) => staged.Add(t))
+            .Returns(Task.CompletedTask);
+        var subject = CreateSubject(repository, refreshTokens);
+
+        await subject.Handle(new LoginUserCommand(user.Email.Value, Password), CancellationToken.None);
+        await subject.Handle(new LoginUserCommand(user.Email.Value, Password), CancellationToken.None);
+
+        Assert.Equal(2, staged.Count);
+        Assert.NotEqual(staged[0].FamilyId, staged[1].FamilyId);
+        refreshTokens.Verify(r => r.GetByHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        refreshTokens.Verify(r => r.RevokeFamilyAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Every_Rejection_Persists_No_Refresh_Token()
+    {
+        var inactive = CreateUser(UserRole.Customer);
+        inactive.Deactivate();
+        var active = CreateUser(UserRole.Customer);
+
+        var cases = new (User? User, string Password)[] { (null, Password), (inactive, Password), (active, "WrongP@ss1") };
+        foreach (var (user, password) in cases)
+        {
+            var refreshTokens = new Mock<IRefreshTokenRepository>();
+
+            var result = await CreateSubject(CreateRepository(user), refreshTokens)
+                .Handle(new LoginUserCommand("someone@example.com", password), CancellationToken.None);
+
+            Assert.Equal(401, result.Error!.Status);
+            refreshTokens.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+    }
+
+    [Theory]
+    [InlineData(0, 30)]
+    [InlineData(-1, 30)]
+    [InlineData(7, 0)]
+    public async Task A_Misconfigured_Lifetime_Throws_And_Saves_Nothing(int days, int maxDays)
+    {
+        var user = CreateUser(UserRole.Customer);
+        var repository = CreateRepository(user);
+        var refreshTokens = new Mock<IRefreshTokenRepository>();
+        var subject = CreateSubject(repository, refreshTokens, days, maxDays);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => subject.Handle(new LoginUserCommand(user.Email.Value, Password), CancellationToken.None));
+
+        refreshTokens.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Never);
+        repository.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Null(user.LastLoginAtUtc);
+    }
+
+    private static readonly DateTime Now = new(2026, 10, 4, 12, 0, 0, DateTimeKind.Utc);
+
+    private static LoginUserHandler CreateSubject(
+        Mock<IUserRepository> repository,
+        Mock<IRefreshTokenRepository>? refreshTokens = null,
+        int refreshTokenExpirationDays = 7,
+        int refreshTokenFamilyMaxDays = 30)
     {
         var passwordHasher = new Mock<IPasswordHasher>();
         passwordHasher.Setup(h => h.Verify(Password, It.IsAny<string>())).Returns(true);
 
         var tokenGenerator = new Mock<ITokenGenerator>();
-        tokenGenerator.Setup(t => t.GenerateAccessToken(It.IsAny<User>())).Returns("access-token");
+        tokenGenerator.Setup(t => t.GenerateAccessToken(It.IsAny<User>())).Returns(new AccessToken("access-token", new DateTime(2026, 10, 4, 13, 0, 0, DateTimeKind.Utc)));
         tokenGenerator.Setup(t => t.GenerateRefreshToken()).Returns("refresh-token");
+
+        var hasher = new Mock<IRefreshTokenHasher>();
+        hasher.Setup(h => h.Hash(It.IsAny<string>())).Returns((string t) => "hash-of-" + t);
 
         return new LoginUserHandler(
             repository.Object,
             passwordHasher.Object,
             NullLogger<LoginUserHandler>.Instance,
             tokenGenerator.Object,
-            new LoginUserRequestValidator());
+            new LoginUserRequestValidator(),
+            (refreshTokens ?? new Mock<IRefreshTokenRepository>()).Object,
+            hasher.Object,
+            Options.Create(new JwtOptions
+            {
+                RefreshTokenExpirationDays = refreshTokenExpirationDays,
+                RefreshTokenFamilyMaxDays = refreshTokenFamilyMaxDays
+            }),
+            new FixedTimeProvider(new DateTimeOffset(Now)));
     }
 
     private static Mock<IUserRepository> CreateRepository(User? user)

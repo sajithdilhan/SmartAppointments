@@ -1,5 +1,14 @@
 # My appointments — Tasks
 
+> **Manual verification (task 6).** Date 2026-10-04. Run on a throwaway integration branch (the three feature branches merged on `unified-error-shape`, identical in `src` and `tests` to `auth-refresh-tokens`), `docker compose up --build -d` (PostgreSQL on 5433), admin seeded through `SEED_ADMIN_*` in the gitignored `.env`; requests with curl and Python through the gateway on 5290 (Auth directly on the compose network for the parallel refresh runs, to stay clear of the 5/min login limit). `dotnet test SmartAppointments.slnx` green on the merge: BuildingBlocks 73, Gateway 138, Auth 171, Booking 170, Availability 303. No bug found; no code changed.
+> - Data: customer A with 52 appointments (36 `Booked`, 16 `Cancelled`, 28 upcoming, 24 past, two with an equal `StartUtc`), customer B with one, customer C with none; one Staff (promoted in SQL) and the seeded Admin. Inserted by SQL into `smart_appointment_booking`.
+> - Filters: default lists both statuses with `page=1`, `pageSize=20`, `totalCount` 52, descending; `status=booked`, `Booked` and `CANCELLED` work (36, 36, 16); `when=upcoming` ascending and all future (28), `when=past` and unfiltered descending (24); upcoming plus past is 52; both filters together (8); ties ordered by `Id` ascending.
+> - Paging: pages of 7 for no filter, upcoming, past and `status=booked` never repeat or skip an item and add up to `totalCount`; `page=99` is `200` with empty `items` and `totalCount` 52; `pageSize=100` works; customer C gets `200` with `totalCount` 0.
+> - Invalid input: `status=Completed`, `NoShow`, empty; `when=now`, empty; `page=0`, `abc`, empty; `pageSize=101`, `0`, empty each give `400` with the `{status, detail}` body naming the parameter; `status=x&page=0&pageSize=500` gives one `400` listing all three. Empty values are not treated as omitted, so the `DisplayFormat(ConvertEmptyStringToNull = false)` binding works and the `Request.Query` fallback was not needed.
+> - Access: `?customerId=<B>` changes nothing; Staff and Admin `403`; no token `401`; `GET /api/appointments/{id}` still `200`; 40 calls in a minute through the gateway, no `429`.
+> - `EXPLAIN (ANALYZE)` of the four shapes (upcoming, upcoming with status, past, unfiltered) on 50 052 rows after `ANALYZE`: `Index Scan` (`Backward` for descending) on `IX_Appointments_CustomerId_StartUtc` under an `Incremental Sort` on the `Id` tie-break, no full sort; no migration needed. The statements were written by hand in the shape of the repository's query (EF's generated SQL was not captured).
+> - Not verified live: a row starting exactly at the clock's "now" (it cannot be hit with a real clock; covered by the handler unit tests).
+
 > Each task leaves the solution building and `dotnet test SmartAppointments.slnx` green. Do them in order. The design's *Open questions — resolved* section is final. There is no migration: the existing `IX_Appointments_CustomerId_StartUtc` serves the query.
 
 ## Chunk A — Application
@@ -38,7 +47,7 @@
   - `src/ApiGateway/SmartAppointments.Gateway/SmartAppointments.Gateway.http`: the same list sample through the gateway with `CustomerToken`
   - _Requirements: 4.4, 4.5_
 
-- [ ] 6. Verify against a local PostgreSQL
+- [x] 6. Verify against a local PostgreSQL
   - Run Auth, Availability, Booking and the gateway; register two customers and a staff and an admin user; seed one customer (SQL or the create endpoint) with more than one page of mixed appointments: several `Booked` and `Cancelled`, past and future, two with an equal `StartUtc`, one starting exactly at the clock's "now" boundary
   - Filters: no filter lists both statuses; `status=booked` and `status=CANCELLED` work; `when=upcoming` is ascending and `when=past` and none descending; both filters together; ties ordered by `Id` ascending; `totalCount` counts all matches
   - Paging: pages 1, 2, 3 never repeat or skip an item; `page` beyond the last gives `200`, empty `items` and the right `totalCount`; `pageSize=100` works; defaults echo `page=1`, `pageSize=20`; a customer with nothing gets `200` and `totalCount` 0

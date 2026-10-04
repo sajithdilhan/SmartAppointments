@@ -15,10 +15,12 @@ namespace SmartAppointments.Gateway.RateLimiting;
 public static class RateLimitPolicies
 {
     public const string Login = "login";
+    public const string Refresh = "refresh";
     public const string AppointmentCreate = "appointment-create";
     public const string SlotSearch = "slot-search";
 
     public const int LoginPermits = 5;
+    public const int RefreshPermits = 10;
     public const int AppointmentCreatePermits = 10;
     public const int SlotSearchPermits = 30;
 
@@ -27,7 +29,14 @@ public static class RateLimitPolicies
 
     /// <summary>Partition by the connection's address; forwarded headers are never read, so they cannot pick a partition.</summary>
     public static RateLimitPartition<string> ByClientIp(HttpContext context)
-        => RateLimitPartition.GetSlidingWindowLimiter(IpKey(context), _ => Options(LoginPermits));
+        => ByClientIp(context, LoginPermits);
+
+    /// <summary>
+    /// The same partitioning with its own permit count. Each policy name gets its own limiter, so the
+    /// same address key in two policies is two separate counters.
+    /// </summary>
+    public static RateLimitPartition<string> ByClientIp(HttpContext context, int permits)
+        => RateLimitPartition.GetSlidingWindowLimiter(IpKey(context), _ => Options(permits));
 
     /// <summary>Partition by the validated <c>sub</c> claim, falling back to the client address without one.</summary>
     public static RateLimitPartition<string> ByUser(HttpContext context, string policy, int permits)
@@ -66,7 +75,8 @@ public static class RateLimitPolicies
     {
         return services.AddRateLimiter(options =>
         {
-            options.AddPolicy(Login, ByClientIp);
+            options.AddPolicy(Login, context => ByClientIp(context, LoginPermits));
+            options.AddPolicy(Refresh, context => ByClientIp(context, RefreshPermits));
             options.AddPolicy(AppointmentCreate, context => ByUser(context, AppointmentCreate, AppointmentCreatePermits));
             options.AddPolicy(SlotSearch, context => ByUser(context, SlotSearch, SlotSearchPermits));
             options.OnRejected = RejectAsync;

@@ -34,7 +34,26 @@ public class ApplicationDbContext : DbContext
 
             entity.HasIndex(e => e.Email).IsUnique();
         });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.ToTable("RefreshTokens");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TokenHash).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.CreatedAtUtc).IsRequired();
+            entity.Property(e => e.ExpiresAtUtc).IsRequired();
+            entity.Property(e => e.FamilyStartedAtUtc).IsRequired();
+
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+            entity.HasIndex(e => e.FamilyId);
+
+            // ReplacedById is bookkeeping, not an integrity rule: no foreign key, so a later purge
+            // of old rows cannot trip over it.
+            entity.HasOne<User>().WithMany().HasForeignKey(e => e.UserId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+        });
     }
 
-    public DbSet<User> Users { get; set; } 
+    public DbSet<User> Users { get; set; }
+
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 }

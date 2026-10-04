@@ -17,6 +17,12 @@ public interface IUserRepository
     Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Reads a user by id for query purposes only (no tracking), as the refresh flow needs the
+    /// user's current email, role and active flag without ever saving the user.
+    /// </summary>
+    Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Reads a user the caller intends to modify. Changes are persisted by <see cref="SaveChangesAsync"/>.
     /// </summary>
     Task<User?> GetForUpdateByEmailAsync(string email, CancellationToken cancellationToken);
