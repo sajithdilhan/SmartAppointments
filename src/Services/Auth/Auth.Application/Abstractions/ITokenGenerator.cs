@@ -1,10 +1,10 @@
-﻿using Auth.Domain.Entities;
-using System.Security.Claims;
+using Auth.Application.Models;
+using Auth.Domain.Entities;
 
 namespace Auth.Application.Abstractions;
 
 public interface ITokenGenerator
 {
-    string GenerateAccessToken(User user);
+    AccessToken GenerateAccessToken(User user);
     string GenerateRefreshToken();
 }

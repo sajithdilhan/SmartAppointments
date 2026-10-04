@@ -22,7 +22,7 @@ public class AuthControllerTests
         var mockSender = new Mock<ISender>();
         var loginRequest = new UserLoginRequest("test@example.com", "password");
         mockSender.Setup(s => s.Send(It.IsAny<LoginUserCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<TokenResponse>.Success(new TokenResponse("access_token", "refresh_token")));
+            .ReturnsAsync(Result<TokenResponse>.Success(new TokenResponse("access_token", "refresh_token", new DateTime(2026, 10, 4, 13, 0, 0, DateTimeKind.Utc))));
 
         var subject = new AuthController(mockSender.Object);
 

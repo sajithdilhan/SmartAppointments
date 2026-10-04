@@ -26,7 +26,11 @@ public static class DependencyInjection
         // Register infrastructure services here
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IUserRepository, UserRepository>();
-        services.Configure<JwtOptions>(configuration.GetRequiredSection("Jwt"));
+        services.AddOptions<JwtOptions>()
+            .Bind(configuration.GetRequiredSection("Jwt"))
+            .Validate(JwtOptions.AreRefreshSettingsValid,
+                "Jwt:RefreshTokenExpirationDays must be positive and Jwt:RefreshTokenFamilyMaxDays must not be smaller.")
+            .ValidateOnStart();
         services.AddScoped<ITokenGenerator, TokenGenerator>();
         services.AddDbContext<ApplicationDbContext>(options =>
         {

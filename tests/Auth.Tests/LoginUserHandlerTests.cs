@@ -1,6 +1,7 @@
 using Auth.Application.Abstractions;
 using Auth.Application.Commands;
 using Auth.Application.Handlers;
+using Auth.Application.Models;
 using Auth.Application.Validations;
 using Auth.Domain.Entities;
 using Auth.Domain.ValueObjects;
@@ -29,6 +30,7 @@ public class LoginUserHandlerTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal("access-token", result.Value!.AccessToken);
+        Assert.Equal(new DateTime(2026, 10, 4, 13, 0, 0, DateTimeKind.Utc), result.Value.AccessTokenExpiresAtUtc);
     }
 
     [Fact]
@@ -87,7 +89,7 @@ public class LoginUserHandlerTests
         passwordHasher.Setup(h => h.Verify(Password, It.IsAny<string>())).Returns(true);
 
         var tokenGenerator = new Mock<ITokenGenerator>();
-        tokenGenerator.Setup(t => t.GenerateAccessToken(It.IsAny<User>())).Returns("access-token");
+        tokenGenerator.Setup(t => t.GenerateAccessToken(It.IsAny<User>())).Returns(new AccessToken("access-token", new DateTime(2026, 10, 4, 13, 0, 0, DateTimeKind.Utc)));
         tokenGenerator.Setup(t => t.GenerateRefreshToken()).Returns("refresh-token");
 
         return new LoginUserHandler(

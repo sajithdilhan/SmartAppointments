@@ -11,9 +11,9 @@ using System.Text;
 
 namespace Auth.Infrastructure.Services;
 
-public class TokenGenerator(IOptions<JwtOptions> options) : ITokenGenerator
+public class TokenGenerator(IOptions<JwtOptions> options, TimeProvider timeProvider) : ITokenGenerator
 {
-    public string GenerateAccessToken(User user)
+    public AccessToken GenerateAccessToken(User user)
     {
         ArgumentNullException.ThrowIfNull(user, nameof(user));
         ArgumentNullException.ThrowIfNull(options?.Value, nameof(options));
@@ -24,6 +24,10 @@ public class TokenGenerator(IOptions<JwtOptions> options) : ITokenGenerator
             throw new InvalidOperationException(
                 $"{nameof(JwtOptions.AccessTokenExpirationMinutes)} must be greater than zero.");
         }
+
+        // A JWT exp claim is whole seconds, so truncate here and return the exact value that is signed.
+        var expires = timeProvider.GetUtcNow().UtcDateTime.AddMinutes(expirationMinutes);
+        expires = new DateTime(expires.Ticks - expires.Ticks % TimeSpan.TicksPerSecond, DateTimeKind.Utc);
 
         var key = Encoding.UTF8.GetBytes(options.Value.SecretKey);
         var securityKey = new SymmetricSecurityKey(key);
@@ -37,13 +41,13 @@ public class TokenGenerator(IOptions<JwtOptions> options) : ITokenGenerator
             new Claim(Constants.EmailClaimType, user.Email.Value),
             new Claim(Constants.RoleClaimType, user.Role.ToString())
         }),
-            Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
+            Expires = expires,
             Issuer = options.Value.Issuer,
             Audience = options.Value.Audience,
             SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256Signature)
         };
         var tokenHandler = new JwtSecurityTokenHandler();
-        return tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
+        return new AccessToken(tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor)), expires);
     }
 
     public string GenerateRefreshToken()

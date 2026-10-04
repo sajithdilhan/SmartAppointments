@@ -11,6 +11,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        services.AddSingleton(TimeProvider.System);
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
         services.AddScoped<IValidator<RegisterCustomerCommand>, RegisterCustomerCommandValidator>();
         services.AddScoped<IValidator<LoginUserCommand>, LoginUserRequestValidator>();

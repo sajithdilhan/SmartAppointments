@@ -52,6 +52,6 @@ public class LoginUserHandler(
         // Generate and return the token response
         var token = tokenGenerator.GenerateAccessToken(user);
         var refreshToken = tokenGenerator.GenerateRefreshToken();
-        return Result<TokenResponse>.Success(new TokenResponse(token, refreshToken));
+        return Result<TokenResponse>.Success(new TokenResponse(token.Value, refreshToken, token.ExpiresAtUtc));
     }
 }

@@ -2,7 +2,7 @@
 
 Implementation branches from `unified-error-shape`, so errors are the camelCase `{"status","detail"}` body from [`shared-web-infrastructure` Requirement 4](../shared-web-infrastructure/requirements.md). Each task leaves `dotnet build SmartAppointments.slnx` and `dotnet test SmartAppointments.slnx` green. References are to [`requirements.md`](requirements.md) and [`design.md`](design.md).
 
-- [ ] 1. Shared pieces: options, clock, access-token result
+- [x] 1. Shared pieces: options, clock, access-token result
   - `JwtOptions.RefreshTokenFamilyMaxDays` (default 30) and `GetRefreshTokenLifetime()` / `GetRefreshTokenFamilyMaxLifetime()` throwing `InvalidOperationException` for a value <= 0; `"RefreshTokenFamilyMaxDays": 30` in Auth's `appsettings.json`
   - `AddInfrastructure`: `AddOptions<JwtOptions>().Bind(...).Validate(...).ValidateOnStart()` — `RefreshTokenExpirationDays > 0` and `RefreshTokenFamilyMaxDays >= RefreshTokenExpirationDays`
   - `AddApplication()` registers `services.AddSingleton(TimeProvider.System)`

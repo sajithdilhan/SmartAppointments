@@ -12,6 +12,8 @@ public class TokenGeneratorTests
 {
     private const string SecretKey = "4pz1K0PoZoBUbjWxk3EmfK-C8CTLMQxExjhgHlMgM97F7qPTkdbhFSusdEgLJaxSrNcSEjafS9hlm3XeCqqV8jI";
 
+    private static readonly DateTimeOffset Now = new(2026, 10, 4, 12, 0, 0, TimeSpan.Zero);
+
     [Fact]
     public void GenerateAccessToken_Emits_Short_Claim_Names()
     {
@@ -20,7 +22,7 @@ public class TokenGeneratorTests
         var user = CreateUser(UserRole.Customer);
         var subject = CreateSubject();
 
-        var token = new JwtSecurityTokenHandler().ReadJwtToken(subject.GenerateAccessToken(user));
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(subject.GenerateAccessToken(user).Value);
 
         Assert.Equal(user.Id.ToString(), token.Claims.Single(c => c.Type == Constants.UserIdClaimType).Value);
         Assert.Equal(user.Email.Value, token.Claims.Single(c => c.Type == Constants.EmailClaimType).Value);
@@ -32,10 +34,46 @@ public class TokenGeneratorTests
     {
         var subject = CreateSubject(accessTokenExpirationMinutes: 60);
 
-        var token = new JwtSecurityTokenHandler().ReadJwtToken(subject.GenerateAccessToken(CreateUser(UserRole.Customer)));
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(subject.GenerateAccessToken(CreateUser(UserRole.Customer)).Value);
 
-        var minutes = (token.ValidTo - DateTime.UtcNow).TotalMinutes;
-        Assert.InRange(minutes, 58, 60);
+        Assert.Equal(Now.UtcDateTime.AddMinutes(60), token.ValidTo);
+    }
+
+    [Fact]
+    public void GenerateAccessToken_Returns_The_Exact_Exp_Claim_As_ExpiresAtUtc()
+    {
+        var subject = CreateSubject();
+
+        var access = subject.GenerateAccessToken(CreateUser(UserRole.Customer));
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(access.Value);
+
+        var exp = long.Parse(token.Claims.Single(c => c.Type == "exp").Value);
+        Assert.Equal(DateTimeKind.Utc, access.ExpiresAtUtc.Kind);
+        Assert.Equal(new DateTimeOffset(access.ExpiresAtUtc).ToUnixTimeSeconds(), exp);
+        Assert.Equal(access.ExpiresAtUtc, token.ValidTo);
+    }
+
+    [Fact]
+    public void GenerateAccessToken_Truncates_The_Expiry_To_Whole_Seconds()
+    {
+        var subject = CreateSubject(now: new DateTimeOffset(2026, 10, 4, 12, 0, 0, 750, TimeSpan.Zero));
+
+        var access = subject.GenerateAccessToken(CreateUser(UserRole.Customer));
+
+        Assert.Equal(0, access.ExpiresAtUtc.Ticks % TimeSpan.TicksPerSecond);
+        Assert.Equal(new DateTime(2026, 10, 4, 13, 0, 0, DateTimeKind.Utc), access.ExpiresAtUtc);
+    }
+
+    [Fact]
+    public void GenerateRefreshToken_Is_64_Random_Bytes()
+    {
+        var subject = CreateSubject();
+
+        var first = subject.GenerateRefreshToken();
+        var second = subject.GenerateRefreshToken();
+
+        Assert.Equal(64, Convert.FromBase64String(first).Length);
+        Assert.NotEqual(first, second);
     }
 
     [Fact]
@@ -51,13 +89,13 @@ public class TokenGeneratorTests
     {
         var subject = CreateSubject();
 
-        var token = new JwtSecurityTokenHandler().ReadJwtToken(subject.GenerateAccessToken(CreateUser(UserRole.Admin)));
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(subject.GenerateAccessToken(CreateUser(UserRole.Admin)).Value);
 
         Assert.Equal("https://localhost:7220", token.Issuer);
         Assert.Contains("https://localhost:7220", token.Audiences);
     }
 
-    private static Auth.Infrastructure.Services.TokenGenerator CreateSubject(int accessTokenExpirationMinutes = 60)
+    private static Auth.Infrastructure.Services.TokenGenerator CreateSubject(int accessTokenExpirationMinutes = 60, DateTimeOffset? now = null)
     {
         return new Auth.Infrastructure.Services.TokenGenerator(Options.Create(new JwtOptions
         {
@@ -66,7 +104,7 @@ public class TokenGeneratorTests
             SecretKey = SecretKey,
             AccessTokenExpirationMinutes = accessTokenExpirationMinutes,
             RefreshTokenExpirationDays = 7
-        }));
+        }), new FixedTimeProvider(now ?? Now));
     }
 
     private static User CreateUser(UserRole role) => role switch
