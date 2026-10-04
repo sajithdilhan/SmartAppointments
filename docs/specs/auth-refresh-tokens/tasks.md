@@ -39,7 +39,7 @@ Implementation branches from `unified-error-shape`, so errors are the camelCase 
   - `RefreshTokenHasherTests`: deterministic, 64 hex characters, output does not contain the input, different inputs differ
   - _Requirements: 1.3, 1.4_
 
-- [ ] 7. Persist the token at login
+- [x] 7. Persist the token at login
   - `LoginUserHandler` takes `IRefreshTokenRepository`, `IRefreshTokenHasher`, `IOptions<JwtOptions>`, `TimeProvider`; builds the family with `RefreshToken.StartFamily`, stages it with `AddAsync`, and commits with the existing `userRepository.SaveChangesAsync` (token and `LastLoginAtUtc` in one commit); response carries `AccessTokenExpiresAtUtc`
   - Tests: success stages exactly one family and saves once; a second login starts a different family; every 401 path never calls `AddAsync`; a non-positive `RefreshTokenExpirationDays` throws and saves nothing; response expiry equals the generator's
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.6, 1.7, 1.8_

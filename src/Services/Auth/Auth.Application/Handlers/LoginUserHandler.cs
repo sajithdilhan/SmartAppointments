@@ -1,8 +1,10 @@
 using Auth.Application.Abstractions;
 using Auth.Application.Commands;
 using Auth.Application.Models;
+using Auth.Domain.Entities;
 using FluentValidation;
 using MediatR;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using SmartAppointments.BuildingBlocks.Models;
 
@@ -13,7 +15,11 @@ public class LoginUserHandler(
     IPasswordHasher passwordHasher,
     ILogger<LoginUserHandler> logger,
     ITokenGenerator tokenGenerator,
-    IValidator<LoginUserCommand> validator) : IRequestHandler<LoginUserCommand, Result<TokenResponse>>
+    IValidator<LoginUserCommand> validator,
+    IRefreshTokenRepository refreshTokenRepository,
+    IRefreshTokenHasher refreshTokenHasher,
+    IOptions<JwtOptions> jwtOptions,
+    TimeProvider timeProvider) : IRequestHandler<LoginUserCommand, Result<TokenResponse>>
 {
     public async Task<Result<TokenResponse>> Handle(LoginUserCommand request, CancellationToken cancellationToken)
     {
@@ -46,12 +52,26 @@ public class LoginUserHandler(
             return Result<TokenResponse>.Failure(new Error(401, "Invalid user or password."));
         }
 
-        user.RecordLogin();
-        await userRepository.SaveChangesAsync(cancellationToken);
-
-        // Generate and return the token response
+        // Everything that can throw (a misconfigured lifetime) runs before the save, so a bad
+        // configuration writes nothing.
+        var now = timeProvider.GetUtcNow().UtcDateTime;
         var token = tokenGenerator.GenerateAccessToken(user);
         var refreshToken = tokenGenerator.GenerateRefreshToken();
+        var options = jwtOptions.Value;
+
+        // Each login starts its own family, so other sessions of the same user are left alone.
+        var family = RefreshToken.StartFamily(
+            user.Id,
+            refreshTokenHasher.Hash(refreshToken),
+            now,
+            options.GetRefreshTokenLifetime(),
+            options.GetRefreshTokenFamilyMaxLifetime());
+
+        // Both repositories share the scoped DbContext: the login timestamp and the new token commit together.
+        user.RecordLogin();
+        await refreshTokenRepository.AddAsync(family, cancellationToken);
+        await userRepository.SaveChangesAsync(cancellationToken);
+
         return Result<TokenResponse>.Success(new TokenResponse(token.Value, refreshToken, token.ExpiresAtUtc));
     }
 }
