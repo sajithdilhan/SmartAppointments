@@ -17,7 +17,7 @@
   - Any existing test double implementing `IAppointmentRepository` is updated so the solution still builds
   - _Requirements: 1.2, 2.1–2.3, 3.1, 3.2, 3.5, 3.6_
 
-- [ ] 3. Handler
+- [x] 3. Handler
   - `ListMyAppointmentsHandler(IAppointmentRepository, IValidator<ListMyAppointmentsQuery>, TimeProvider)`: validate (one `Error(400, "Invalid request data. Errors: ...")` joined with `","`, repository untouched on failure), resolve parameters, read `TimeProvider` once, call the repository, map with `AppointmentResponse.From`, return `PagedResponse<AppointmentResponse>`
   - `ListMyAppointmentsHandlerTests` per the design (defaults, parsed filters reach the repository, caller id, clock read once, mapping, empty and beyond-the-end pages, invalid input never calls the repository)
   - _Requirements: 1.1, 1.4–1.7, 2.1–2.5, 3.3–3.5, 3.7_
