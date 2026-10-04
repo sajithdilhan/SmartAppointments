@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<RegisterCustomerCommand>, RegisterCustomerCommandValidator>();
         services.AddScoped<IValidator<LoginUserCommand>, LoginUserRequestValidator>();
         services.AddScoped<IValidator<RefreshTokenCommand>, RefreshTokenCommandValidator>();
+        services.AddScoped<IValidator<LogoutCommand>, LogoutCommandValidator>();
         return services;
     }
 }

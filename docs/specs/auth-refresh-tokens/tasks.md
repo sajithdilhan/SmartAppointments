@@ -50,7 +50,7 @@ Implementation branches from `unified-error-shape`, so errors are the camelCase 
   - `RefreshTokenCommandHandlerTests` and `RefreshTokenCommandValidatorTests` as listed in the design's Testing strategy (happy path, each 401 cause, no repository call on 400 or over-256, expired does not revoke, `TryRotateAsync` false revokes the family, access token generated before rotation, logs contain neither token nor hash)
   - _Requirements: 2.1, 2.3, 2.4, 2.5, 2.6, 2.7, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
-- [ ] 9. Logout: command, validator, handler
+- [x] 9. Logout: command, validator, handler
   - `LogoutCommand` (`Result<Unit>`), `LogoutRequest(string?)`, `LogoutCommandValidator` (`NotNull`), `LogoutCommandHandler` (empty, whitespace, over-long or unknown -> success without revoke; known -> `RevokeFamilyAsync`); register the validator
   - `LogoutCommandHandlerTests` and `LogoutCommandValidatorTests`: current, rotated, expired and already-revoked tokens revoke the family once; unknown and empty succeed without a write; null is `400`; revoke is keyed on `FamilyId` so other families are untouched
   - _Requirements: 4.1, 4.2, 4.3, 4.6_
