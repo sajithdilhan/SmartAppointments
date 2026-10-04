@@ -4,7 +4,7 @@
 
 ## Chunk A — Application
 
-- [ ] 1. Parameters, models and validator
+- [x] 1. Parameters, models and validator
   - `AppointmentTimeFilter` (`Upcoming`, `Past`) and `PagedResponse<T>(Items, Page, PageSize, TotalCount)` in `Booking.Application/Models`
   - `MyAppointmentsParameters` helper (`TryParseStatus`, `TryParseWhen`, `TryParsePage`, `TryParsePageSize`; explicit case-insensitive name match, digits-only invariant-culture integers, defaults 1 and 20, max 100)
   - `ListMyAppointmentsQuery(CallerId, Status, When, Page, PageSize)` (raw strings) and `ListMyAppointmentsQueryValidator` with the four rules and messages of the design; register it in `AddApplication()`
