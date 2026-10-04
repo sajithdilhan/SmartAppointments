@@ -1,5 +1,12 @@
 # Gateway CORS — Tasks
 
+> **Manual verification (task 8).** Date 2026-10-04. Run on a throwaway integration branch (the three feature branches merged on `unified-error-shape`, identical in `src` and `tests` to `auth-refresh-tokens`), `docker compose up --build -d` (PostgreSQL on 5433), admin seeded through `SEED_ADMIN_*` in the gitignored `.env`; requests with curl and Python through the gateway on 5290 (Auth directly on the compose network for the parallel refresh runs, to stay clear of the 5/min login limit). `dotnet test SmartAppointments.slnx` green on the merge: BuildingBlocks 73, Gateway 138, Auth 171, Booking 170, Availability 303. No bug found; no code changed.
+> - Preflights with an allowed origin (`http://localhost:8081`, the compose `WEB_ORIGIN`; `4200` is replaced by it at index 0 in compose and correctly gets no headers) on `/api/appointments`, `/api/auth/login`, `/nothing` and `/internal/slots/abc`: `204` each, `Allow-Origin` = origin, `Allow-Methods GET,POST,PUT,DELETE`, `Allow-Headers`, `Max-Age 600`, `Vary: Origin`, `X-Correlation-ID`, no `Allow-Credentials`; the internal preflight left no line in Availability's log; the gateway logs the OPTIONS lines. `PATCH` and `x-evil` preflights: `204` with lists lacking them. Disallowed origin and `Origin: null`: `204`, no `Access-Control-*`. `OPTIONS` without `Access-Control-Request-Method`: `401` with CORS headers.
+> - Actual requests with the allowed origin: `401` (no token), `404` (`/api/queue/x`), `200` (token; `/healthz`), `429` on the 6th login with `Retry-After: 60`, `502` with Booking stopped: each carries `Allow-Origin`, `Expose-Headers` and `Vary`. Disallowed origin with a token: `200`, no CORS header. Ten preflights to `/api/auth/login` then six logins: five `401` (credentials rejected, not limited), the sixth `429`.
+> - Start-up (`dotnet run`, `Cors__AllowedOrigins__0`): `*`, `https://app.example.com/` and `localhost:4200` each stop the gateway naming `Cors:AllowedOrigins:0`. Production with an empty list: preflight `401`/`404` as before, no `Access-Control-*` header.
+> - Compose with `WEB_ORIGIN` unset and set: the gateway starts healthy both times and origin `8081` is allowed both times (it is in the development file).
+> - Not run: the bad-origin start-up check inside compose (done with `dotnet run`, as the task allows).
+
 > Each task leaves `dotnet build SmartAppointments.slnx` at 0 warnings and `dotnet test SmartAppointments.slnx` green. Do them in order. The design is final; its open questions were settled by the project owner and folded into the requirements.
 >
 > Check a box only when the code exists and the tests pass, in the same commit as the code.
@@ -50,7 +57,7 @@
   - `@WebOrigin = http://localhost:4200` and the requests of the design's manual-check table, each with its expected result in a comment (preflights on routed, anonymous, unrouted and `/internal/` paths; `PATCH` and `x-evil`; disallowed and `null` origin; `OPTIONS` with no `Access-Control-Request-Method` giving `401`; `401`, `404`, `429`, `200`, `502` with an allowed origin; disallowed origin with a token)
   - _Requirements: 3.1, 3.2, 3.4, 3.5, 4.1, 5.1, 5.3, 5.4, 6.2, 7.4_
 
-- [ ] 8. Manual verification against the running system
+- [x] 8. Manual verification against the running system
   - Run Auth, Availability, Booking and the gateway in Development and replay the `.http` CORS section; check each expected result of the design's table, including the correlation id and a log line on a preflight, that nothing reaches Availability for an `/internal/` preflight, and that ten preflights to `/api/auth/login` leave all five logins available
   - Startup failures: `Cors__AllowedOrigins__0` set to `*`, `https://app.example.com/` and `localhost:4200` each stop the gateway naming the key; an empty list (non-Development) adds no `Access-Control-*` header
   - `docker compose up --build` with `WEB_ORIGIN` unset and set

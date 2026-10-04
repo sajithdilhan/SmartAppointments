@@ -1,5 +1,12 @@
 # Auth refresh tokens — Tasks
 
+> **Manual verification (task 14).** Date 2026-10-04. Run on a throwaway integration branch (the three feature branches merged on `unified-error-shape`, identical in `src` and `tests` to `auth-refresh-tokens`), `docker compose up --build -d` (PostgreSQL on 5433), admin seeded through `SEED_ADMIN_*` in the gitignored `.env`; requests with curl and Python through the gateway on 5290 (Auth directly on the compose network for the parallel refresh runs, to stay clear of the 5/min login limit). `dotnet test SmartAppointments.slnx` green on the merge: BuildingBlocks 73, Gateway 138, Auth 171, Booking 170, Availability 303. No bug found; no code changed.
+> - Schema: `\d "RefreshTokens"` and `dotnet ef migrations script` match the design (nine columns, unique `IX_RefreshTokens_TokenHash`, `IX_RefreshTokens_FamilyId`, `IX_RefreshTokens_UserId`, cascade FK to `Users`). The migration was applied by the compose start-up migrator rather than `dotnet ef database update`.
+> - Concurrency: 20 rounds of a fresh login, a second login and two parallel refreshes (background curls) of the same token: every round gave exactly one `200` and one `401`; the winner's new token was `401` afterwards in all 20; the second login's family still refreshed (`200`) in all 20.
+> - A replayed rotated token is `401` and the family's newest token is `401` too; token expiry moved into the past in SQL: `401` with no row revoked; logout then refresh `401`; logout twice `204` and `204`; user set inactive in SQL: refresh `401`, still `401` after reactivating, another family unaffected (`200`). A lowered `RefreshTokenFamilyMaxDays` was simulated by moving a family's `FamilyStartedAtUtc` 40 days back against the default 30: `401` (the setting itself was not changed; the cap is computed from the same two values).
+> - Through the gateway: 10 refreshes pass, the 11th and 12th are `429` with `Retry-After: 60`, and a login straight after is `200`; `GET /api/auth/refresh` `401`; refresh works with no `Authorization` header and with an expired bearer; logout works with none; `accessTokenExpiresAtUtc` equals the access token's `exp` (`2026-10-04T07:47:15Z` both).
+> - Docs: `/openapi/auth/v1.json` through the gateway lists `/api/Auth/refresh`, `/api/Auth/logout` and `accessTokenExpiresAtUtc`; the Scalar page itself answers `200` (not browsed).
+
 Implementation branches from `unified-error-shape`, so errors are the camelCase `{"status","detail"}` body from [`shared-web-infrastructure` Requirement 4](../shared-web-infrastructure/requirements.md). Each task leaves `dotnet build SmartAppointments.slnx` and `dotnet test SmartAppointments.slnx` green. References are to [`requirements.md`](requirements.md) and [`design.md`](design.md).
 
 - [x] 1. Shared pieces: options, clock, access-token result
@@ -80,7 +87,7 @@ Implementation branches from `unified-error-shape`, so errors are the camelCase 
   - `CLAUDE.md`: Auth bullet (refresh and logout, token families, hashed storage, `TimeProvider`, 7-day sliding under a 30-day cap); gateway bullet (nine routes -> eleven, the `refresh` limiter of 10 per client address); Local settings (`Jwt:RefreshTokenFamilyMaxDays`, default 30, ships in `appsettings.json`); a pointer to this spec
   - _Requirements: all (documentation of the superseding spec)_
 
-- [ ] 14. Manual verification against local PostgreSQL
+- [x] 14. Manual verification against local PostgreSQL
   - Apply the migration (`dotnet ef database update`); compare the schema with the design (columns, unique `IX_RefreshTokens_TokenHash`, `IX_RefreshTokens_FamilyId`, cascade FK); review `dotnet ef migrations script`
   - Start Auth, Availability, Booking and the gateway. Log in, then fire the same refresh token twice in parallel (PowerShell `ForEach-Object -Parallel`), repeated 20 times with fresh logins: exactly one `200` and one `401` each time; afterwards the winner's new token is also `401` and a second login's family still refreshes
   - Replay a rotated token (`401`, family dead); move a token's expiry into the past in the database and refresh (`401`, family not revoked); log out then refresh (`401`); log out twice (`204` both); deactivate a user in the database then refresh (`401`, family revoked, still `401` after reactivating); lower `RefreshTokenFamilyMaxDays` and refresh an old family (`401`)
