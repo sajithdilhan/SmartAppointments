@@ -87,6 +87,7 @@ services:
       ReverseProxy__Clusters__auth__Destinations__primary__Address: http://auth:8080
       ReverseProxy__Clusters__availability__Destinations__primary__Address: http://availability:8080
       ReverseProxy__Clusters__booking__Destinations__primary__Address: http://booking:8080
+      Cors__AllowedOrigins__0: ${WEB_ORIGIN:-}
 
 volumes:
   postgres-data:

@@ -40,7 +40,7 @@
 
 ## Chunk C — Configuration, manual checks and documentation
 
-- [ ] 6. Docker Compose and `.env.example`
+- [x] 6. Docker Compose and `.env.example`
   - `docker-compose.yml`, `gateway.environment`: `Cors__AllowedOrigins__0: ${WEB_ORIGIN:-}`
   - `.env.example`: `WEB_ORIGIN=http://localhost:8081` with a comment (an origin, no trailing slash)
   - `docker compose config` still renders with `WEB_ORIGIN` unset
