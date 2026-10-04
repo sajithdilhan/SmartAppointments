@@ -15,6 +15,7 @@ public static class DependencyInjection
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
         services.AddScoped<IValidator<RegisterCustomerCommand>, RegisterCustomerCommandValidator>();
         services.AddScoped<IValidator<LoginUserCommand>, LoginUserRequestValidator>();
+        services.AddScoped<IValidator<RefreshTokenCommand>, RefreshTokenCommandValidator>();
         return services;
     }
 }

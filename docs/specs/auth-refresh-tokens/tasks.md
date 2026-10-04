@@ -44,7 +44,7 @@ Implementation branches from `unified-error-shape`, so errors are the camelCase 
   - Tests: success stages exactly one family and saves once; a second login starts a different family; every 401 path never calls `AddAsync`; a non-positive `RefreshTokenExpirationDays` throws and saves nothing; response expiry equals the generator's
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.6, 1.7, 1.8_
 
-- [ ] 8. Refresh: command, validator, handler
+- [x] 8. Refresh: command, validator, handler
   - `RefreshTokenCommand`, `RefreshTokenRequest(string?)`, `RefreshTokenCommandValidator` (`NotEmpty`), `RefreshTokenCommandHandler` with the 10-step flow of the design (length cap before hashing, revoked-before-expired, family revoke on reuse, inactive user and lost race, access token generated before the rotation, `RecordLogin` not called); register the validator
   - Warnings log the family id only, never the token or hash
   - `RefreshTokenCommandHandlerTests` and `RefreshTokenCommandValidatorTests` as listed in the design's Testing strategy (happy path, each 401 cause, no repository call on 400 or over-256, expired does not revoke, `TryRotateAsync` false revokes the family, access token generated before rotation, logs contain neither token nor hash)
