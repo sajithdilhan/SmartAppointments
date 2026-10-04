@@ -150,6 +150,18 @@ public class CreateAppointmentCommandHandlerTests
     }
 
     [Fact]
+    public async Task A_Failure_Stored_Before_The_Error_Body_Change_Still_Replays()
+    {
+        // The stored format is the internal Error record, not the HTTP body, so old rows need no migration.
+        _idempotency.Setup(r => r.ClaimAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ClaimResult.Replay(409, "{\"status\":409,\"details\":\"Slot is full.\"}"));
+
+        var result = await Send();
+
+        Assert.Equal(new Error(409, "Slot is full."), result.Error);
+    }
+
+    [Fact]
     public async Task A_Hash_Mismatch_Is_422()
     {
         _idempotency.Setup(r => r.ClaimAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))

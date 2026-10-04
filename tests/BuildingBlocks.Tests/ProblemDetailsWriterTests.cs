@@ -28,12 +28,12 @@ public class ProblemDetailsWriterTests
     }
 
     [Fact]
-    public async Task Writes_An_ApiProblemDetails_Body_With_Default_Serializer_Casing()
+    public async Task Writes_An_ApiProblemDetails_Body_With_Camel_Case_Keys()
     {
         var (_, body) = await WriteAsync(429, "Too many requests.");
 
-        Assert.Equal("{\"Status\":429,\"Detail\":\"Too many requests.\"}", body);
-        var problem = JsonSerializer.Deserialize<ApiProblemDetails>(body);
+        Assert.Equal("{\"status\":429,\"detail\":\"Too many requests.\"}", body);
+        var problem = JsonSerializer.Deserialize<ApiProblemDetails>(body, JsonSerializerOptions.Web);
         Assert.Equal(new ApiProblemDetails(429, "Too many requests."), problem);
     }
 }

@@ -86,7 +86,7 @@ public class AvailabilityClientTests
     {
         var (client, _) = Create(new HttpResponseMessage(HttpStatusCode.Conflict)
         {
-            Content = JsonContent.Create(new { status = 409, details = "Slot is full." })
+            Content = JsonContent.Create(new { status = 409, detail = "Slot is full." })
         });
 
         var result = await client.ReserveAsync(SlotId, AppointmentId, CancellationToken.None);

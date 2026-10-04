@@ -5,6 +5,7 @@ using Scalar.AspNetCore;
 using SmartAppointments.BuildingBlocks.Web.Authentication;
 using SmartAppointments.BuildingBlocks.Web.Middlewares;
 using SmartAppointments.BuildingBlocks.Web.OpenApi;
+using SmartAppointments.BuildingBlocks.Web.Results;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddSharedProblemDetails();
 builder.Services.AddOpenApiWithBearerAuth();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddAuthorizationWithRoles();

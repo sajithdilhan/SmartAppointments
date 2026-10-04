@@ -62,7 +62,7 @@ public class RateLimitRejectionTests
         var context = await RejectAsync(TimeSpan.FromSeconds(5));
         context.Response.Body.Position = 0;
 
-        var problem = JsonSerializer.Deserialize<ApiProblemDetails>(await new StreamReader(context.Response.Body).ReadToEndAsync());
+        var problem = JsonSerializer.Deserialize<ApiProblemDetails>(await new StreamReader(context.Response.Body).ReadToEndAsync(), JsonSerializerOptions.Web);
 
         Assert.NotNull(problem);
         Assert.Equal(429, problem.Status);

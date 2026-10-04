@@ -71,6 +71,6 @@ public class ExceptionMiddlewareTests
     {
         context.Response.Body.Seek(0, SeekOrigin.Begin);
         var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
-        return JsonSerializer.Deserialize<ApiProblemDetails>(body)!;
+        return JsonSerializer.Deserialize<ApiProblemDetails>(body, JsonSerializerOptions.Web)!;
     }
 }

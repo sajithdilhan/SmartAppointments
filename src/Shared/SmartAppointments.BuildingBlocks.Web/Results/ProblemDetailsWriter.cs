@@ -6,7 +6,8 @@ namespace SmartAppointments.BuildingBlocks.Web.Results;
 
 /// <summary>
 /// The one place that writes an <see cref="ApiProblemDetails"/> body as <c>application/problem+json</c>,
-/// serialized with the <c>System.Text.Json</c> defaults every service already uses.
+/// serialized with <see cref="JsonSerializerOptions.Web"/> (camelCase), the same shape MVC writes for a
+/// controller's failed <c>Result</c>: <c>{"status":429,"detail":"..."}</c>.
 /// </summary>
 public static class ProblemDetailsWriter
 {
@@ -20,6 +21,6 @@ public static class ProblemDetailsWriter
         context.Response.StatusCode = problem.Status;
         context.Response.ContentType = ContentType;
 
-        await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
+        await context.Response.WriteAsync(JsonSerializer.Serialize(problem, JsonSerializerOptions.Web));
     }
 }
