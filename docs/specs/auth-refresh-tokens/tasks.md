@@ -67,7 +67,7 @@ Implementation branches from `unified-error-shape`, so errors are the camelCase 
   - Update `RoutingConfigurationTests` (eleven routes, new routes, limiter only on `auth-refresh`, others unchanged) and `RateLimitPoliciesTests` (constants; `refresh` permits exactly 10 then rejects; remote-address key, `X-Forwarded-For` ignored; login still 5)
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 12. `.http` samples
+- [x] 12. `.http` samples
   - `SmartAppointments.Gateway.http`: refresh and logout after the login request, with comments on the `429` at the 11th refresh and `401` plus family revoke on replay
   - `Auth.Api.http`: replace the template `weatherforecast` request with login, refresh and logout against `{{Auth.Api_HostAddress}}`
   - _Requirements: 5.1, 5.6_

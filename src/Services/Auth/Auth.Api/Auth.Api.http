@@ -1,6 +1,34 @@
 @Auth.Api_HostAddress = http://localhost:5008
 
-GET {{Auth.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+# The Auth service directly (not through the gateway, so no rate limits).
+
+POST {{Auth.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "nimal@example.com",
+  "password": "Passw0rd!Passw0rd"
+}
+
+###
+
+# A refresh token is single use: the response carries a new accessToken and refreshToken.
+# Presenting a token that was already redeemed is 401 and revokes the whole session.
+POST {{Auth.Api_HostAddress}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "<paste refreshToken from login>"
+}
+
+###
+
+# Idempotent: 204 for any token, known or not.
+POST {{Auth.Api_HostAddress}}/api/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "<paste refreshToken from login>"
+}
 
 ###
