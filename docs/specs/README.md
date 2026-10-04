@@ -25,6 +25,7 @@ Templates live in [`_templates/`](_templates/).
 | Feature | Status | FR-IDs | Spec |
 |---|---|---|---|
 | Auth identity | Implemented | FR-AUTH-001, FR-AUTH-002, FR-AUTH-003 | [requirements](auth-identity/requirements.md) · [design](auth-identity/design.md) · [tasks](auth-identity/tasks.md) |
+| Auth refresh tokens | Implemented | FR-AUTH-004, FR-AUTH-005 | [requirements](auth-refresh-tokens/requirements.md) · [design](auth-refresh-tokens/design.md) · [tasks](auth-refresh-tokens/tasks.md) |
 | Availability branches | Implemented | FR-AVL-001 | [requirements](availability-branches/requirements.md) · [design](availability-branches/design.md) · [tasks](availability-branches/tasks.md) |
 | Availability service types | Implemented | FR-AVL-002 | [requirements](availability-service-types/requirements.md) · [design](availability-service-types/design.md) · [tasks](availability-service-types/tasks.md) |
 | Availability slots | Implemented (generate, search) | FR-AVL-003, FR-AVL-004 | [requirements](availability-slots/requirements.md) · [design](availability-slots/design.md) · [tasks](availability-slots/tasks.md) |

@@ -72,7 +72,7 @@ Implementation branches from `unified-error-shape`, so errors are the camelCase 
   - `Auth.Api.http`: replace the template `weatherforecast` request with login, refresh and logout against `{{Auth.Api_HostAddress}}`
   - _Requirements: 5.1, 5.6_
 
-- [ ] 13. Documentation and superseded specs
+- [x] 13. Documentation and superseded specs
   - `docs/specs/auth-identity/requirements.md`: mark Requirements 6 and 7 "Superseded by [auth-refresh-tokens](../auth-refresh-tokens/requirements.md)" (keep the text for history); close Known gap 6 with a pointer there
   - `docs/specs/auth-identity/tasks.md`: tasks 16-18 and their dependents 19-21 marked "superseded by [auth-refresh-tokens](../auth-refresh-tokens/tasks.md)" and removed from the open work (intro line updated); task 15 marked "moved to [auth-refresh-tokens](../auth-refresh-tokens/tasks.md) task 2"; `auth-identity/design.md` gets a note at its refresh sections pointing here
   - `docs/specs/README.md`: add an "Auth refresh tokens" row (FR-AUTH-004, FR-AUTH-005) with the three links

@@ -1,6 +1,6 @@
 ﻿# Auth identity — Tasks
 
-> **Retro-fitted spec.** Tasks 1–8 were reconstructed from the commit history after the fact; their boxes are checked because the code exists and `dotnet test SmartAppointments.slnx` passes. Tasks 9–14 came from the *Known gaps* section of [`requirements.md`](requirements.md) and were done as a batch; the test count went from 28 executed cases to 88. Tasks 15–21 implement the approved Requirements 6 and 7 and are the open work.
+> **Retro-fitted spec.** Tasks 1–8 were reconstructed from the commit history after the fact; their boxes are checked because the code exists and `dotnet test SmartAppointments.slnx` passes. Tasks 9–14 came from the *Known gaps* section of [`requirements.md`](requirements.md) and were done as a batch; the test count went from 28 executed cases to 88. Tasks 15–21 were the plan for Requirements 6 and 7; they are no longer open work: task 15 moved to [auth-refresh-tokens](../auth-refresh-tokens/tasks.md) and tasks 16–21 are superseded by it.
 
 ## Delivered
 
@@ -89,52 +89,17 @@
   - `ExceptionMiddleware` status mapping, including that a 500 body does not echo the exception message
   - _Known gap 5. `UserRepository`, `DatabaseSeeder` and `LoggingMiddleware` remain untested: all three need a database or a full request pipeline, which the pure-unit-test convention in [`design.md`](design.md) does not cover. They wait for the integration-test harness._
 
-## Backlog
+## Moved and superseded
 
-Requirements 6 and 7 are approved. Tasks 15–21 implement them and are ordered so the solution builds
-and the suite stays green after each one.
+Nothing in this spec is open. Requirements 6 and 7 are superseded by [auth-refresh-tokens](../auth-refresh-tokens/requirements.md), which models token families rather than a chain; its [tasks](../auth-refresh-tokens/tasks.md) replace the items below. They are listed without checkboxes so they do not read as open work.
 
-- [ ] 15. Design-time DbContext factory
-  - `IDesignTimeDbContextFactory<ApplicationDbContext>` in `Auth.Infrastructure`, reading the connection string from user-secrets or the environment and falling back to a dummy one
-  - Without it `dotnet ef migrations add` cannot build the host, because task 9 left the connection string blank in `appsettings.json` and `AddInfrastructure` now throws on it
-  - Must come first: every later task that touches the schema depends on the migration workflow working
-  - _Requirements: 5.2_
-
-- [ ] 16. `RefreshToken` aggregate
-  - `Id`, `UserId`, `TokenHash`, `CreatedAtUtc`, `ExpiresAtUtc`, nullable `RevokedAtUtc`, nullable `ReplacedByTokenId`; private setters and a `RefreshToken.Issue(...)` factory
-  - `Redeem(replacement)` sets `RevokedAtUtc` and `ReplacedByTokenId` together; `Revoke()` sets only `RevokedAtUtc`; computed `IsActive`
-  - `RefreshTokenTests` covering all three behaviours and both `IsActive` false cases
-  - _Requirements: 6.4, 6.6, 7.2, 7.4_
-
-- [ ] 17. Persistence for refresh tokens
-  - `RefreshTokens` configuration in `ApplicationDbContext`: unique index on `TokenHash`, non-unique index on `UserId`, cascade-delete FK to `Users`
-  - `IRefreshTokenRepository` (`AddAsync`, `GetByHashForUpdateAsync`, `GetDescendantsAsync`, `DeleteExpiredForUserAsync`) and its implementation; no `SaveChangesAsync` of its own — it shares the context with `IUserRepository`
-  - `AddRefreshTokens` migration
-  - _Requirements: 6.1, 6.7, 6.9_
-
-- [ ] 18. Hash refresh tokens
-  - `IRefreshTokenHasher` / `RefreshTokenHasher`: SHA-256, hex-encoded, registered in `Auth.Infrastructure`
-  - Tests for determinism (the lookup depends on it) and that the hash does not contain the token
-  - _Requirements: 6.2_
-
-- [ ] 19. Persist the token issued at login
-  - `LoginUserHandler` stages a `RefreshToken` for the generated value and prunes that user's expired tokens, committing with the existing `SaveChangesAsync` that already writes `LastLoginAtUtc`
-  - Tests: login writes exactly one refresh token; the stored hash is not the returned token; expired tokens for that user are deleted; a second login does not disturb the first login's live token
-  - _Requirements: 6.1, 6.7, 6.9_
-
-- [ ] 20. `POST /api/Auth/refresh`
-  - `RefreshTokenCommand` / `RefreshTokenCommandHandler` / `RefreshTokenRequest`, anonymous endpoint returning `TokenResponse`
-  - Single undifferentiated `Error(401, "Invalid or expired refresh token.")` for unknown, expired, revoked, replayed and inactive-user
-  - Replay of an already-redeemed token walks `ReplacedByTokenId` and revokes the descendants, then still returns 401
-  - Revocation and replacement commit in one `SaveChangesAsync`
-  - Tests: happy path returns a new pair; each of the five failure causes returns the identical error; replay revokes descendants; the commit happens exactly once
-  - _Requirements: 6.3, 6.4, 6.5, 6.6, 6.7, 6.8_
-
-- [ ] 21. `POST /api/Auth/logout`
-  - `LogoutCommand` / `LogoutCommandHandler`, anonymous endpoint returning `204 No Content`
-  - Revokes only the presented token; succeeds silently for an unknown, already-revoked or expired one
-  - Tests: a live token is revoked; an unknown token returns 204 without writing; other tokens for the same user stay live; a logged-out token then fails `/refresh` without triggering chain revocation
-  - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
+- 15. Design-time DbContext factory — moved to [auth-refresh-tokens](../auth-refresh-tokens/tasks.md) task 2 (it is not about refresh tokens, and the migration workflow needs it).
+- 16. `RefreshToken` aggregate — superseded by [auth-refresh-tokens](../auth-refresh-tokens/tasks.md) task 3.
+- 17. Persistence for refresh tokens — superseded by [auth-refresh-tokens](../auth-refresh-tokens/tasks.md) task 5.
+- 18. Hash refresh tokens — superseded by [auth-refresh-tokens](../auth-refresh-tokens/tasks.md) task 6.
+- 19. Persist the token issued at login — superseded by [auth-refresh-tokens](../auth-refresh-tokens/tasks.md) task 7.
+- 20. `POST /api/Auth/refresh` — superseded by [auth-refresh-tokens](../auth-refresh-tokens/tasks.md) task 8.
+- 21. `POST /api/Auth/logout` — superseded by [auth-refresh-tokens](../auth-refresh-tokens/tasks.md) task 9.
 
 ## Deferred
 

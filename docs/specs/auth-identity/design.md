@@ -39,6 +39,8 @@ Route prefix `api/[controller]` → `/api/Auth`. The controller takes `ISender` 
 | `POST /api/Auth/refresh` | `Refresh(RefreshTokenRequest, ct)` | anonymous † | `RefreshTokenCommand(RefreshToken)` |
 | `POST /api/Auth/logout` | `Logout(RefreshTokenRequest, ct)` | anonymous † | `LogoutCommand(RefreshToken)` |
 
+> **Superseded.** The refresh and logout design in this document (`RefreshTokenCommandHandler`, `RefreshToken` and its `ReplacedByTokenId` chain, the repository methods) is replaced by [auth-refresh-tokens](../auth-refresh-tokens/design.md): token families, one conditional-update rotation, logout revoking the family. The notes below are kept for history.
+
 † Both are anonymous on purpose. The refresh token *is* the credential, and requiring a valid access
 token alongside it would defeat the point: the access token has usually just expired, which is why
 the client is calling `/refresh` at all. Requiring one on `/logout` would be worse — it would leave
@@ -99,6 +101,8 @@ deep in a value object, wrong as the response to a query string a caller typed. 
 handler keeps a caller mistake a 400 instead of letting `ExceptionMiddleware` render it as a 500.
 
 Overwriting rather than comparing-and-rejecting is intentional: a customer asking for someone else's profile gets their own back rather than an error that would confirm the other address exists.
+
+> Superseded by [auth-refresh-tokens](../auth-refresh-tokens/design.md) (handler flow and family revocation).
 
 **`RefreshTokenCommandHandler`** → `Result<TokenResponse>`
 hash the presented token → `GetByHashForUpdateAsync` → not found, expired, or the user is inactive →
@@ -178,6 +182,8 @@ Single aggregate, single table.
 **`User`** — private constructor, private setters, created only through the static factories `RegisterCustomer` / `RegisterStaff` / `RegisterAdmin`, each of which assigns `Guid.CreateVersion7()`, trims the strings, sets `RegistrationDateUtc = DateTime.UtcNow` and `IsActive = true` (Req 1.2). Behaviour: `RecordLogin()`, `Deactivate()`, `Activate()`, `ChangePassword(hash)`; computed `FullName`.
 
 **`Email`** — a `record` with a private constructor and a `Create` factory that trims, lower-cases, and throws `ArgumentException` when the value is empty or has no `@` (Req 1.7). Being a record gives it value equality, which is what makes `u.Email == value` work in the repository query.
+
+> Superseded by [auth-refresh-tokens](../auth-refresh-tokens/design.md) (data model: `FamilyId`, `FamilyStartedAtUtc`, no `Redeem`/`Revoke` methods).
 
 **`RefreshToken`** — the second aggregate. Private setters and a `RefreshToken.Issue(userId, tokenHash, expiresAtUtc)` factory, mirroring `User`. Fields: `Id` (`Guid.CreateVersion7()`), `UserId`, `TokenHash`, `CreatedAtUtc`, `ExpiresAtUtc`, nullable `RevokedAtUtc`, nullable `ReplacedByTokenId`. Behaviour: `Redeem(RefreshToken replacement)` (sets `RevokedAtUtc` and `ReplacedByTokenId` together, so a redeemed token can never lack its successor), `Revoke()` (logout — sets `RevokedAtUtc` and leaves `ReplacedByTokenId` null), and the computed `IsActive => RevokedAtUtc is null && ExpiresAtUtc > DateTime.UtcNow`.
 

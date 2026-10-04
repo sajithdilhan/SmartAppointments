@@ -8,7 +8,7 @@ The Auth service owns user identity for the whole system: it is the only service
 
 These belong in one spec rather than several because they share the `User` aggregate and a single design: the same `Result<T>` error contract, the same repository staging rules, the same claim names. It refines sections 8 (Authentication), 9 and 10 of [`docs/requirements.md`](../../requirements.md) and covers `FR-AUTH-001` through `FR-AUTH-005`.
 
-Requirements 1–5 are built and tested. Requirements 6 and 7 are approved and not yet built — [`tasks.md`](tasks.md) tracks which is which.
+Requirements 1–5 are built and tested. Requirements 6 and 7 were approved but never built under this spec: they are **superseded by [auth-refresh-tokens](../auth-refresh-tokens/requirements.md)**, which models token families rather than a chain and is the one that was implemented.
 
 ## Requirements
 
@@ -120,6 +120,8 @@ Requirements 1–5 are built and tested. Requirements 6 and 7 are approved and n
 
 ### Requirement 6: Redeem and rotate a refresh token (FR-AUTH-004)
 
+> **Superseded by [auth-refresh-tokens](../auth-refresh-tokens/requirements.md) (Requirements 1-3).** The text below is kept for history only; do not build from it.
+
 **User Story:** As a signed-in user, I want a short-lived access token to be renewed silently in the background, so that I stay signed in for a working day without my credentials being held by the client or re-entered every hour.
 
 *(`docs/requirements.md` names a refresh token in the auth section but specifies no redemption flow. `FR-AUTH-004` is claimed here and should be written back into the BRD.)*
@@ -139,6 +141,8 @@ Requirements 1–5 are built and tested. Requirements 6 and 7 are approved and n
 *Deliberately excluded:* no grace window for concurrent redemption. Two clients redeeming the same token within milliseconds is indistinguishable from the replay of criterion 6 and is treated as one, which is the stricter and simpler reading.
 
 ### Requirement 7: Log out (FR-AUTH-005)
+
+> **Superseded by [auth-refresh-tokens](../auth-refresh-tokens/requirements.md) (Requirement 4).** The text below is kept for history only; do not build from it.
 
 **User Story:** As a signed-in user, I want to log out, so that the session I am ending cannot be resumed from the device I am leaving.
 
@@ -181,5 +185,5 @@ Gaps 1–5 have been closed; each has a matching checked item in [`tasks.md`](ta
 
 ### Still open
 
-6. **The refresh token is issued but unredeemable.** Specified as Requirements 6 and 7; see [`tasks.md`](tasks.md) tasks 15–16. Open until those ship.
+6. ~~**The refresh token is issued but unredeemable.**~~ Closed by [auth-refresh-tokens](../auth-refresh-tokens/requirements.md), which supersedes Requirements 6 and 7: refresh and logout are built there (`FR-AUTH-004`, `FR-AUTH-005`).
 7. **No MediatR validation pipeline behaviour.** Each handler calls its own validator, so a future handler that forgets to is silently unvalidated. A `ValidationBehavior<TRequest, TResponse>` in `Auth.Application` would make validation structural rather than a convention. Not yet specced.
