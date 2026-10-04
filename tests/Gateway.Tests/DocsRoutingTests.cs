@@ -30,13 +30,13 @@ public class DocsRoutingTests
     }
 
     [Fact]
-    public void Development_Adds_Exactly_The_Three_Docs_Routes_To_The_Nine()
+    public void Development_Adds_Exactly_The_Three_Docs_Routes_To_The_Eleven()
     {
         var shipped = Load("appsettings.json").GetSection("ReverseProxy:Routes").GetChildren().Select(r => r.Key).ToHashSet();
         var development = Load("appsettings.json", "appsettings.Development.json").GetSection("ReverseProxy:Routes").GetChildren().Select(r => r.Key).ToHashSet();
 
-        Assert.Equal(9, shipped.Count);
-        Assert.Equal(12, development.Count);
+        Assert.Equal(11, shipped.Count);
+        Assert.Equal(14, development.Count);
         Assert.Equal(DocsRoutes, development.Except(shipped).Order().ToArray());
     }
 

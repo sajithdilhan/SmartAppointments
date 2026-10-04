@@ -61,7 +61,7 @@ Implementation branches from `unified-error-shape`, so errors are the camelCase 
   - Model-binding `400`s are expected in the `{status, detail}` shape from `shared-web-infrastructure` Requirement 4.5; add a test only if that shared factory is already on the branch
   - _Requirements: 3.5, 4.4, 4.6, 5.6, 5.7_
 
-- [ ] 11. Gateway: routes and `refresh` rate limit
+- [x] 11. Gateway: routes and `refresh` rate limit
   - `RateLimitPolicies.Refresh = "refresh"`, `RefreshPermits = 10`, `ByClientIp(HttpContext, int permits)` with the one-argument overload kept (login unchanged); register the `refresh` policy in `AddGatewayRateLimiting`
   - `auth-refresh` (with `RateLimiterPolicy: refresh`) and `auth-logout` routes in the gateway's `appsettings.json`: `Order` 0, `anonymous`, `POST`, `RequestHeaderOriginalHost`
   - Update `RoutingConfigurationTests` (eleven routes, new routes, limiter only on `auth-refresh`, others unchanged) and `RateLimitPoliciesTests` (constants; `refresh` permits exactly 10 then rejects; remote-address key, `X-Forwarded-For` ignored; login still 5)

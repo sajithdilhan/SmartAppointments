@@ -37,11 +37,13 @@ public class RateLimitPoliciesTests
     public void The_Constants_Equal_The_Business_Rules()
     {
         Assert.Equal(5, RateLimitPolicies.LoginPermits);
+        Assert.Equal(10, RateLimitPolicies.RefreshPermits);
         Assert.Equal(10, RateLimitPolicies.AppointmentCreatePermits);
         Assert.Equal(30, RateLimitPolicies.SlotSearchPermits);
         Assert.Equal(TimeSpan.FromMinutes(1), RateLimitPolicies.Window);
         Assert.Equal(6, RateLimitPolicies.Segments);
         Assert.Equal("login", RateLimitPolicies.Login);
+        Assert.Equal("refresh", RateLimitPolicies.Refresh);
         Assert.Equal("appointment-create", RateLimitPolicies.AppointmentCreate);
         Assert.Equal("slot-search", RateLimitPolicies.SlotSearch);
     }
@@ -99,6 +101,26 @@ public class RateLimitPoliciesTests
     [Fact]
     public void Login_Permits_Exactly_Five_Attempts()
         => Assert.Equal(5, Permitted(RateLimitPolicies.ByClientIp(Context()), 20));
+
+    [Fact]
+    public void Refresh_Permits_Exactly_Ten_Attempts()
+        => Assert.Equal(10, Permitted(RateLimitPolicies.ByClientIp(Context(), RateLimitPolicies.RefreshPermits), 40));
+
+    [Fact]
+    public void Refresh_Keys_On_The_Remote_Address_And_Ignores_A_Spoofed_Forwarded_For_Header()
+    {
+        var spoofed = Context("10.0.0.1");
+        spoofed.Request.Headers["X-Forwarded-For"] = "1.2.3.4";
+
+        Assert.Equal("ip:10.0.0.1", RateLimitPolicies.ByClientIp(spoofed, RateLimitPolicies.RefreshPermits).PartitionKey);
+        Assert.NotEqual(
+            RateLimitPolicies.ByClientIp(Context("10.0.0.1"), RateLimitPolicies.RefreshPermits).PartitionKey,
+            RateLimitPolicies.ByClientIp(Context("10.0.0.2"), RateLimitPolicies.RefreshPermits).PartitionKey);
+    }
+
+    [Fact]
+    public void Login_Still_Permits_Five_Through_The_One_Argument_Overload()
+        => Assert.Equal(5, Permitted(RateLimitPolicies.ByClientIp(Context()), 40));
 
     [Fact]
     public void Appointment_Create_Permits_Exactly_Ten_Attempts()

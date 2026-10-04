@@ -37,15 +37,17 @@ public class RoutingConfigurationTests
     }
 
     [Fact]
-    public void The_Shipped_Configuration_Has_The_Nine_Routes()
+    public void The_Shipped_Configuration_Has_The_Eleven_Routes()
     {
         var routes = Routes(Shipped()).ToDictionary(r => r.Name);
 
         Assert.Equal(
-            ["appointments", "appointments-create", "auth", "auth-login", "auth-register", "branches", "services", "slots", "slots-search"],
+            ["appointments", "appointments-create", "auth", "auth-login", "auth-logout", "auth-refresh", "auth-register", "branches", "services", "slots", "slots-search"],
             routes.Keys.Order().ToArray());
 
         AssertRoute(routes["auth-login"], "/api/auth/login", "auth", "POST");
+        AssertRoute(routes["auth-refresh"], "/api/auth/refresh", "auth", "POST");
+        AssertRoute(routes["auth-logout"], "/api/auth/logout", "auth", "POST");
         AssertRoute(routes["auth-register"], "/api/auth/register", "auth", "POST");
         AssertRoute(routes["auth"], "/api/auth/{**catch-all}", "auth");
         AssertRoute(routes["branches"], "/api/branches/{**catch-all}", "availability");
@@ -83,7 +85,7 @@ public class RoutingConfigurationTests
     }
 
     [Fact]
-    public void Every_Route_Names_A_Policy_And_Only_Login_And_Register_Are_Anonymous()
+    public void Every_Route_Names_A_Policy_And_Only_The_Auth_Entry_Routes_Are_Anonymous()
     {
         foreach (var route in Routes(Development()))
         {
@@ -91,7 +93,7 @@ public class RoutingConfigurationTests
         }
 
         var anonymous = Routes(Shipped()).Where(r => r.Policy == "anonymous").Select(r => r.Name).Order().ToArray();
-        Assert.Equal(["auth-login", "auth-register"], anonymous);
+        Assert.Equal(["auth-login", "auth-logout", "auth-refresh", "auth-register"], anonymous);
         Assert.All(Routes(Shipped()).Where(r => r.Policy != "anonymous"), r => Assert.Equal("default", r.Policy));
     }
 
@@ -109,13 +111,44 @@ public class RoutingConfigurationTests
         }
     }
 
+    [Theory]
+    [InlineData("auth-refresh", "/api/auth/refresh")]
+    [InlineData("auth-logout", "/api/auth/logout")]
+    public void Refresh_And_Logout_Are_Anonymous_Order_Zero_Post_Routes_To_Auth_Like_Login(string name, string path)
+    {
+        var routes = Routes(Shipped()).ToDictionary(r => r.Name);
+        var route = routes[name];
+
+        Assert.Equal(path, route.Path);
+        Assert.Equal("auth", route.ClusterId);
+        Assert.Equal(0, route.Order);
+        Assert.Equal("anonymous", route.Policy);
+        Assert.Equal(["POST"], route.Methods);
+        Assert.Equal(routes["auth-login"].Order, route.Order);
+        Assert.Equal(routes["auth-login"].Policy, route.Policy);
+    }
+
     [Fact]
-    public void Only_Login_Slot_Search_And_Appointment_Create_Name_A_Rate_Limiter_Policy()
+    public void Other_Verbs_On_Refresh_And_Logout_Fall_Through_To_The_Authenticated_Auth_Catch_All()
+    {
+        var routes = Routes(Shipped()).ToDictionary(r => r.Name);
+
+        Assert.Equal(["POST"], routes["auth-refresh"].Methods);
+        Assert.Equal(["POST"], routes["auth-logout"].Methods);
+        Assert.Empty(routes["auth"].Methods);
+        Assert.Equal(10, routes["auth"].Order);
+        Assert.Equal("default", routes["auth"].Policy);
+    }
+
+    [Fact]
+    public void Only_Login_Refresh_Slot_Search_And_Appointment_Create_Name_A_Rate_Limiter_Policy()
     {
         var limited = Routes(Shipped()).Where(r => r.RateLimiter is not null).ToDictionary(r => r.Name, r => r.RateLimiter);
 
-        Assert.Equal(3, limited.Count);
+        Assert.Equal(4, limited.Count);
         Assert.Equal("login", limited["auth-login"]);
+        Assert.Equal("refresh", limited["auth-refresh"]);
+        Assert.False(limited.ContainsKey("auth-logout"));
         Assert.Equal("appointment-create", limited["appointments-create"]);
         Assert.Equal("slot-search", limited["slots-search"]);
     }
