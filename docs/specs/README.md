@@ -29,11 +29,13 @@ Templates live in [`_templates/`](_templates/).
 | Availability service types | Implemented | FR-AVL-002 | [requirements](availability-service-types/requirements.md) · [design](availability-service-types/design.md) · [tasks](availability-service-types/tasks.md) |
 | Availability slots | Implemented (generate, search) | FR-AVL-003, FR-AVL-004 | [requirements](availability-slots/requirements.md) · [design](availability-slots/design.md) · [tasks](availability-slots/tasks.md) |
 | Booking appointments | Implemented | FR-AVL-005, FR-BKG-001, FR-BKG-002, FR-BKG-005 | [requirements](booking-appointments/requirements.md) · [design](booking-appointments/design.md) · [tasks](booking-appointments/tasks.md) |
+| Booking my appointments | Spec approved | FR-BKG-003 | [requirements](booking-my-appointments/requirements.md) · [design](booking-my-appointments/design.md) · [tasks](booking-my-appointments/tasks.md) |
 | Shared web infrastructure | Implemented | — (FR-AUTH-003, NFRs) | [requirements](shared-web-infrastructure/requirements.md) · [design](shared-web-infrastructure/design.md) · [tasks](shared-web-infrastructure/tasks.md) |
 | API gateway | Implemented | — (refines BRD gateway row, 11.5 rate limiting, correlation-ID NFR) | [requirements](api-gateway/requirements.md) · [design](api-gateway/design.md) · [tasks](api-gateway/tasks.md) |
 | Local orchestration | Implemented | — (refines BRD 4.1, 15, 16 Docker Compose) | [requirements](local-orchestration/requirements.md) · [design](local-orchestration/design.md) · [tasks](local-orchestration/tasks.md) |
+| Gateway CORS | Implemented | — (browser access to the gateway; refines the API gateway spec's out-of-scope CORS line) | [requirements](gateway-cors/requirements.md) · [design](gateway-cors/design.md) · [tasks](gateway-cors/tasks.md) |
 
-Features named in `docs/requirements.md` but not yet specced: the rest of appointment booking (FR-BKG-003, FR-BKG-004, FR-BKG-006), walk-in queue (FR-QUE-*), notifications (FR-NOT-001), reporting (FR-RPT-*).
+Features named in `docs/requirements.md` but not yet specced: the rest of appointment booking (FR-BKG-004, FR-BKG-006), walk-in queue (FR-QUE-*), notifications (FR-NOT-001), reporting (FR-RPT-*).
 
 ## Retro-fitted specs
 
