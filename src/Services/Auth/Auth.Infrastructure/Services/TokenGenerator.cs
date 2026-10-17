@@ -25,8 +25,12 @@ public class TokenGenerator(IOptions<JwtOptions> options, TimeProvider timeProvi
                 $"{nameof(JwtOptions.AccessTokenExpirationMinutes)} must be greater than zero.");
         }
 
+        // iat and nbf come from the same clock as exp; left unset, the handler would fill them from
+        // DateTime.UtcNow and reject an exp that is not after them.
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+
         // A JWT exp claim is whole seconds, so truncate here and return the exact value that is signed.
-        var expires = timeProvider.GetUtcNow().UtcDateTime.AddMinutes(expirationMinutes);
+        var expires = now.AddMinutes(expirationMinutes);
         expires = new DateTime(expires.Ticks - expires.Ticks % TimeSpan.TicksPerSecond, DateTimeKind.Utc);
 
         var key = Encoding.UTF8.GetBytes(options.Value.SecretKey);
@@ -41,6 +45,8 @@ public class TokenGenerator(IOptions<JwtOptions> options, TimeProvider timeProvi
             new Claim(Constants.EmailClaimType, user.Email.Value),
             new Claim(Constants.RoleClaimType, user.Role.ToString())
         }),
+            IssuedAt = now,
+            NotBefore = now,
             Expires = expires,
             Issuer = options.Value.Issuer,
             Audience = options.Value.Audience,

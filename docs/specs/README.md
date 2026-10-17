@@ -7,16 +7,19 @@ This project follows **spec-driven development**. Every feature is described by 
 ## The loop
 
 ```
-requirements.md  ──►  design.md  ──►  tasks.md  ──►  implement
-     approve            approve         approve
+plan.md  ──►  requirements.md  ──►  design.md  ──►  tasks.md  ──►  implement
+ accept          approve            approve         approve
+(stage 0)
 ```
+
+`plan.md` is stage 0. It scopes the feature, lists open decisions and says whether an RFC is needed, and the user accepts it before `requirements.md` is written. Reviews, ADRs, RFCs, implementation by subagents and verification are described in full in [`docs/WORKFLOW.md`](../WORKFLOW.md). The specs that already exist predate `plan.md` and have none.
 
 1. **One feature per folder.** A spec covers a bounded feature, not a whole microservice. `auth-identity` covers registration, login and profile retrieval because they share the `User` aggregate and one design; a separate concern such as password reset would get its own folder.
 2. **Requirements are approved before a design is written.** The design is an answer to the acceptance criteria, so the criteria have to be settled first.
 3. **The design is approved before tasks are written.** Tasks are coding steps derived from the design, nothing more.
 4. **Tasks are checked off in the same commit as the code that satisfies them.** A checked box means the code exists and the tests pass. An unchecked box is the backlog.
 
-Use the slash commands in `.claude/commands/` to walk the loop: `/spec-new`, `/spec-design`, `/spec-tasks`, `/spec-execute`. Each stops at its gate and waits for approval.
+Use the slash commands in `.claude/commands/` to walk the loop: `/plan-new`, `/plan-review`, `/rfc-new`, `/adr-new`, `/spec-new`, `/spec-design`, `/spec-tasks`, `/spec-execute`, `/review` and `/verify`. Each stops at its gate and waits for approval.
 
 Templates live in [`_templates/`](_templates/).
 
