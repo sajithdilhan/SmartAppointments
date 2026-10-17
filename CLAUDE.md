@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development workflow
+
+Every feature follows the process in [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (adopted 2026-10-17, [ADR-0001](docs/adr/0001-record-architecture-decisions.md)). Each stage has a gate, and the main session acts as the orchestrator: it plans, briefs subagents and verifies their work, and asks the user about design decisions instead of assuming.
+
+| # | Stage | Artefact / action | Who | Command |
+|---|---|---|---|---|
+| 0 | Plan | `docs/specs/<feature>/plan.md` (template in `docs/specs/_templates/`); an RFC in `docs/rfc/` if the change is cross-cutting | orchestrator | `/plan-new`, `/rfc-new` |
+| 1 | Review | Findings on the plan (and the RFC) | `plan-reviewer`, `architecture-reviewer` | `/plan-review` |
+| 2 | Acceptance | User accepts the plan; then `requirements.md` → `design.md` (with Proposed ADRs in `docs/adr/`) → `tasks.md`, each approved before the next | user + orchestrator | `/spec-new`, `/spec-design`, `/adr-new`, `/spec-tasks` |
+| 3 | Implementation | Code + tests on a feature branch; orchestrator commits and checks off `tasks.md` | `implementer` (non-overlapping chunks) | `/spec-execute` |
+| 4 | Code review | Findings on the branch diff, fixed and re-reviewed | `code-reviewer` | `/review` |
+| 5 | Architecture review | Diff checked against design, ADRs, RFC and layering (parallel with 4) | `architecture-reviewer` | `/review` |
+| 6 | Testing and verification | Build + full tests, acceptance-criterion → test table, manual end-to-end check, docs updated (this file, `docs/specs/README.md`, `plan.md` status), PR raised | `test-verifier` + orchestrator | `/verify` |
+
+- **RFC** only for cross-cutting changes: a new service, a new infrastructure dependency (RabbitMQ, Redis, outbox), a change to an inter-service contract or to `BuildingBlocks`/`BuildingBlocks.Web`, or a change touching two or more services. Otherwise plan + spec + ADRs.
+- **ADR** for each decision that is hard to reverse, crosses features or services, chooses between real alternatives or departs from a convention. One decision per ADR; accepted ADRs are never edited except their status, a later ADR supersedes them. Decisions made before 2026-10-17 are recorded in the specs and this file, not as ADRs.
+- Agents live in `.claude/agents/` and commands in `.claude/commands/`. Use the subagents for every stage they cover, running independent ones in parallel (always on Sonnet, see below).
+- Small changes (a bug fix or one-file tweak with no design decision) can skip plan and spec, but still get code review and verification.
+- Done means the full test suite passes **and** a PR is raised.
+
 ## Project status
 
 This is an in-progress .NET microservices portfolio project (Smart Appointment & Queue Management System). **`README.md` and [`docs/requirements.md`](docs/requirements.md) describe the target/aspirational architecture for the full system — they are not a description of what's currently built.** `docs/requirements.md` is the full BRD/solution-architecture document (functional requirements with FR-IDs, business rules, non-functional requirements, API endpoint drafts, domain events, and the 3-week build plan) — consult it for the intended behavior of a feature before implementing it, but verify against actual code for what already exists. Only these pieces currently have real implementation:
@@ -111,3 +131,9 @@ project's chosen subagent model because delegated tasks (codebase searches, spec
 refactors) don't need the larger model and run faster and cheaper on it. The intended model is
 **Sonnet 5.5**; the `sonnet` alias resolves to the latest Sonnet release, so it picks up Sonnet 5.5
 without pinning a version-specific model ID.
+
+The project subagents in `.claude/agents/` (`plan-reviewer`, `implementer`, `code-reviewer`,
+`architecture-reviewer`, `test-verifier`) already set `model: sonnet`; still pass it on the spawn. The
+reviewers and the test verifier are read-only and only report; fixes go through an `implementer`.
+Subagents never commit; the orchestrator reviews each result, commits and moves the workflow to the
+next gate.
