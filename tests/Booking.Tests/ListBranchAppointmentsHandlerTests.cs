@@ -4,6 +4,7 @@ using Booking.Application.Models;
 using Booking.Application.Queries;
 using Booking.Application.Validations;
 using Booking.Domain.Entities;
+using Microsoft.Extensions.Logging;
 using Moq;
 using SmartAppointments.BuildingBlocks;
 using SmartAppointments.BuildingBlocks.Models;
@@ -18,6 +19,7 @@ public class ListBranchAppointmentsHandlerTests
     private readonly Mock<IAppointmentRepository> _appointments = new();
     private readonly Mock<IBranchTimeZoneProvider> _zones = new();
     private readonly Mock<IAuthClient> _auth = new();
+    private readonly Mock<ILogger<ListBranchAppointmentsHandler>> _logger = new();
     private readonly Guid _branch = Guid.CreateVersion7();
 
     public ListBranchAppointmentsHandlerTests()
@@ -43,7 +45,7 @@ public class ListBranchAppointmentsHandlerTests
         string role = Constants.AdminRole, Guid? callerBranch = null, Guid? branch = null,
         string? date = null, string? status = null, string? page = null, string? pageSize = null) =>
         new ListBranchAppointmentsHandler(
-            _appointments.Object, _zones.Object, _auth.Object, new ListBranchAppointmentsQueryValidator(), new FixedTimeProvider(Now))
+            _appointments.Object, _zones.Object, _auth.Object, new ListBranchAppointmentsQueryValidator(), new FixedTimeProvider(Now), _logger.Object)
             .Handle(new ListBranchAppointmentsQuery(branch ?? _branch, date, status, page, pageSize, role, callerBranch),
                 CancellationToken.None);
 
@@ -198,5 +200,38 @@ public class ListBranchAppointmentsHandlerTests
         Assert.Empty(result.Value!.Items);
         Assert.False(result.Value.CustomersUnavailable);
         _auth.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task An_Unknown_Zone_Logs_A_Warning_And_Still_Lists_The_Utc_Day()
+    {
+        _zones.Setup(z => z.GetAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<string?>.Success("Mars/Olympus_Mons"));
+
+        var result = await Send(date: "2030-01-06");
+
+        Assert.True(result.IsSuccess);
+        _appointments.Verify(r => r.ListForBranchAsync(
+            _branch, new DateTime(2030, 1, 6, 0, 0, 0, DateTimeKind.Utc), new DateTime(2030, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+            It.IsAny<AppointmentStatus?>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
+        _logger.Verify(l => l.Log(
+            LogLevel.Warning, It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("Mars/Olympus_Mons") && v.ToString()!.Contains(_branch.ToString())),
+            null, It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task A_Null_Zone_And_A_Known_Zone_Log_Nothing()
+    {
+        var known = await Send();
+        _zones.Setup(z => z.GetAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<string?>.Success(null));
+        var none = await Send();
+
+        Assert.True(known.IsSuccess);
+        Assert.True(none.IsSuccess);
+        _logger.Verify(l => l.Log(
+            It.IsAny<LogLevel>(), It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(),
+            It.IsAny<Exception?>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Never);
     }
 }

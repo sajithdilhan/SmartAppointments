@@ -3,6 +3,7 @@ using Booking.Application.Models;
 using Booking.Application.Queries;
 using FluentValidation;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using SmartAppointments.BuildingBlocks;
 using SmartAppointments.BuildingBlocks.Models;
 
@@ -13,7 +14,8 @@ public class ListBranchAppointmentsHandler(
     IBranchTimeZoneProvider zoneProvider,
     IAuthClient authClient,
     IValidator<ListBranchAppointmentsQuery> validator,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ILogger<ListBranchAppointmentsHandler> logger)
     : IRequestHandler<ListBranchAppointmentsQuery, Result<BranchAppointmentsPage>>
 {
     public async Task<Result<BranchAppointmentsPage>> Handle(
@@ -47,6 +49,14 @@ public class ListBranchAppointmentsHandler(
         if (!zone.IsSuccess)
         {
             return Result<BranchAppointmentsPage>.Failure(zone.Error!);
+        }
+
+        // An unknown zone id still falls back to UTC (a null one is silent), but is worth a warning.
+        if (!BranchDay.TryResolve(zone.Value, out _))
+        {
+            logger.LogWarning(
+                "Branch {BranchId} has time zone {TimeZoneId}, which this runtime does not know; using UTC.",
+                request.BranchId, zone.Value);
         }
 
         var day = date ?? BranchDay.Today(zone.Value, nowUtc);

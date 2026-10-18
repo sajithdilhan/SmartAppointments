@@ -38,4 +38,10 @@ public interface IUserRepository
     Task<IReadOnlyList<User>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
 
     Task SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Saves the user's changed branch and revokes every live refresh token of that user in one
+    /// transaction, so either both happen or neither. Returns the number of tokens revoked.
+    /// </summary>
+    Task<int> SaveBranchMoveAsync(User user, DateTime nowUtc, CancellationToken cancellationToken);
 }

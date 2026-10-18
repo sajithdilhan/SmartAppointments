@@ -52,6 +52,22 @@ public class UserRepository(ApplicationDbContext context) : IUserRepository
         }
     }
 
+    public async Task<int> SaveBranchMoveAsync(User user, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        // Same transaction pattern as RefreshTokenRepository.TryRotateAsync: disposing uncommitted rolls
+        // back, so a failed revoke leaves the branch unchanged and the admin's retry is not a no-op. No
+        // retry execution strategy is configured; if one is added this must move inside it.
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+        var revoked = await context.RefreshTokens
+            .Where(t => t.UserId == user.Id && t.RevokedAtUtc == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAtUtc, nowUtc), cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+        return revoked;
+    }
+
     // 23505 is the PostgreSQL unique_violation SQLSTATE. The context also holds RefreshTokens, whose
     // unique token-hash index must not be reported as a duplicate email, so the index is named.
     private static bool IsUniqueViolation(DbUpdateException ex) =>

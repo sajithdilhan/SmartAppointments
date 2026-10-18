@@ -24,16 +24,15 @@ public class MarkAppointmentHandler(IAppointmentRepository appointments, TimePro
         }
 
         // Same outcome already recorded: a repeat is a 200 and changes nothing.
-        var byStatus = AnswerForStatus(appointment!, target);
-        if (byStatus is not null)
-        {
-            return byStatus;
-        }
-
         var nowUtc = timeProvider.GetUtcNow().UtcDateTime;
-        if (nowUtc < appointment!.StartUtc)
+        switch (appointment!.CheckMark(target, nowUtc))
         {
-            return Result<AppointmentResponse>.Failure(AppointmentErrors.NotStarted());
+            case MarkCheck.AlreadyMarked:
+                return Result<AppointmentResponse>.Success(AppointmentResponse.From(appointment));
+            case MarkCheck.WrongStatus:
+                return Result<AppointmentResponse>.Failure(AppointmentErrors.NotMarkable(appointment.Status, target));
+            case MarkCheck.NotStarted:
+                return Result<AppointmentResponse>.Failure(AppointmentErrors.NotStarted());
         }
 
         var changed = await appointments.TryTransitionAsync(appointment.Id, target, nowUtc, cancellationToken);
@@ -47,8 +46,10 @@ public class MarkAppointmentHandler(IAppointmentRepository appointments, TimePro
 
         if (!changed)
         {
-            return AnswerForStatus(current!, target)
-                   ?? Result<AppointmentResponse>.Failure(AppointmentErrors.NotMarkable(current!.Status, target));
+            // The winner's row decides: the same outcome is a repeat (200), anything else is a 409.
+            return current!.CheckMark(target, nowUtc) == MarkCheck.AlreadyMarked
+                ? Result<AppointmentResponse>.Success(AppointmentResponse.From(current))
+                : Result<AppointmentResponse>.Failure(AppointmentErrors.NotMarkable(current.Status, target));
         }
 
         return Result<AppointmentResponse>.Success(AppointmentResponse.From(current!));
@@ -58,17 +59,4 @@ public class MarkAppointmentHandler(IAppointmentRepository appointments, TimePro
     private static bool CanAccess(Appointment? appointment, MarkAppointmentCommand request) =>
         appointment is not null &&
         (request.CallerRole != Constants.StaffRole || request.CallerBranchId == appointment.BranchId);
-
-    // Null means "still Booked, carry on".
-    private static Result<AppointmentResponse>? AnswerForStatus(Appointment appointment, AppointmentStatus target)
-    {
-        if (appointment.Status == target)
-        {
-            return Result<AppointmentResponse>.Success(AppointmentResponse.From(appointment));
-        }
-
-        return appointment.Status == AppointmentStatus.Booked
-            ? null
-            : Result<AppointmentResponse>.Failure(AppointmentErrors.NotMarkable(appointment.Status, target));
-    }
 }

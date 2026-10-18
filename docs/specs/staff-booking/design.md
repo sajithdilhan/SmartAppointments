@@ -281,3 +281,16 @@ Where the code differs from, or fills a gap in, the design above:
 - `CachedBranchTimeZoneProvider` is registered as scoped.
 - `Auth.Infrastructure` references `BuildingBlocks.Web` for `CorrelationIdHandler`, as `Booking.Infrastructure` already does.
 - `BranchDay` moves a local midnight that falls in a DST gap forward in 30-minute steps until it exists.
+
+### Changes from the code and architecture review
+
+- **Branch move is one transaction** (review Major): saving the new `BranchId` and revoking the user's refresh tokens happen in one database transaction (`IUserRepository.SaveBranchMoveAsync`, in the style of `TryRotateAsync`), replacing "save, then revoke"; `IRefreshTokenRepository.RevokeAllForUserAsync` named above was removed as unused. A failure leaves both unchanged, so the admin's retry does the whole move. This supersedes the "accepted" partial-failure case in the handler description above.
+- **The domain owns the mark rules**: `Appointment.CheckMark(target, now)` states the rules (`Booked` only, not before start, repeat allowed) and `MarkAppointmentHandler` uses it on the read and re-read copies before and after the conditional update; the unused `Complete`/`MarkNoShow` mutators were removed.
+- **Unknown zone ids are logged**: when Availability returns a time zone the runtime does not know, the branch list still uses the UTC day (Req 6.3) but logs a warning naming the branch and zone.
+
+### Known residual risks and notes
+
+- **Staff without a branch.** A Staff account created before this feature (possible only by hand) has a null `BranchId`, so its token has no `branch_id` and it gets `404`/`403` on every staff endpoint until an admin assigns a branch with `PUT /api/auth/staff/{id}/branch`.
+- **Null zone cached for 5 minutes.** A branch read as having no schedule is treated as UTC for up to 5 minutes after its schedule is set (ADR-0004's cache).
+- **Login racing a move.** A login that read the user before the move can still add a refresh-token family after the move's transaction; that session starts with the old branch claim, which the next refresh corrects (the same 60-minute bound as ADR-0007).
+- **No database tests for the conditional updates and the branch query.** As for the existing repositories, `TryTransitionAsync` and `ListForBranchAsync` are covered by the manual end-to-end check, not by automated tests.

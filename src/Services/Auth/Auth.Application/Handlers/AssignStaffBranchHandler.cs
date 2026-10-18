@@ -11,7 +11,6 @@ namespace Auth.Application.Handlers;
 
 public class AssignStaffBranchHandler(
     IUserRepository userRepository,
-    IRefreshTokenRepository refreshTokenRepository,
     IAvailabilityClient availabilityClient,
     IValidator<AssignStaffBranchCommand> validator,
     TimeProvider timeProvider,
@@ -46,12 +45,11 @@ public class AssignStaffBranchHandler(
         }
 
         user.AssignBranch(request.BranchId);
-        await userRepository.SaveChangesAsync(cancellationToken);
 
-        // Saved first, so a failed save leaves both the branch and the sessions unchanged. A failure
-        // between the two leaves the new branch with live sessions, which the next refresh corrects.
-        var revoked = await refreshTokenRepository.RevokeAllForUserAsync(
-            user.Id, timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
+        // One transaction: the branch change and the session revocation both happen or neither does,
+        // so a failure leaves the old branch and an admin retry is not mistaken for the same-branch no-op.
+        var revoked = await userRepository.SaveBranchMoveAsync(
+            user, timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
 
         logger.LogInformation(
             "Moved staff {UserId} to branch {BranchId}; revoked {Revoked} refresh tokens", user.Id, request.BranchId, revoked);

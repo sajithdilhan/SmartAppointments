@@ -26,8 +26,8 @@ public class MarkAppointmentHandlerTests
         switch (status)
         {
             case AppointmentStatus.Cancelled: a.Cancel(Now.UtcDateTime.AddHours(-1)); break;
-            case AppointmentStatus.Completed: a.Complete(Now.UtcDateTime); break;
-            case AppointmentStatus.NoShow: a.MarkNoShow(Now.UtcDateTime); break;
+            case AppointmentStatus.Completed: a.WithStatus(AppointmentStatus.Completed, Now.UtcDateTime); break;
+            case AppointmentStatus.NoShow: a.WithStatus(AppointmentStatus.NoShow, Now.UtcDateTime); break;
         }
 
         return a;

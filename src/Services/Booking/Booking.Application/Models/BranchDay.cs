@@ -41,24 +41,36 @@ public static class BranchDay
         return DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeToUtc(local, zone), DateTimeKind.Utc);
     }
 
-    private static TimeZoneInfo Resolve(string? zoneId)
+    /// <summary>
+    /// Looks the zone up. A null or blank id is not an error (UTC, <c>true</c>); an id the runtime does
+    /// not know gives UTC and <c>false</c>, so the caller can report it.
+    /// </summary>
+    public static bool TryResolve(string? zoneId, out TimeZoneInfo zone)
     {
+        zone = TimeZoneInfo.Utc;
         if (string.IsNullOrWhiteSpace(zoneId))
         {
-            return TimeZoneInfo.Utc;
+            return true;
         }
 
         try
         {
-            return TimeZoneInfo.FindSystemTimeZoneById(zoneId);
+            zone = TimeZoneInfo.FindSystemTimeZoneById(zoneId);
+            return true;
         }
         catch (TimeZoneNotFoundException)
         {
-            return TimeZoneInfo.Utc;
+            return false;
         }
         catch (InvalidTimeZoneException)
         {
-            return TimeZoneInfo.Utc;
+            return false;
         }
+    }
+
+    private static TimeZoneInfo Resolve(string? zoneId)
+    {
+        TryResolve(zoneId, out var zone);
+        return zone;
     }
 }

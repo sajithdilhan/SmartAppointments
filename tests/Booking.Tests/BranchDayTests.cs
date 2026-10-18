@@ -137,4 +137,29 @@ public class BranchDayTests
 
         Assert.True(to > Utc(9999, 12, 31));
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void A_Missing_Zone_Id_Resolves_To_Utc_Without_Complaint(string? zoneId)
+    {
+        Assert.True(BranchDay.TryResolve(zoneId, out var zone));
+        Assert.Equal(TimeZoneInfo.Utc, zone);
+    }
+
+    [Fact]
+    public void A_Known_Zone_Id_Resolves_To_That_Zone()
+    {
+        Assert.True(BranchDay.TryResolve("Pacific/Auckland", out var zone));
+        Assert.Equal(TimeSpan.FromHours(13), zone.GetUtcOffset(Utc(2030, 1, 15)));
+    }
+
+    [Fact]
+    public void An_Unknown_Zone_Id_Reports_False_And_Falls_Back_To_Utc()
+    {
+        Assert.False(BranchDay.TryResolve("Mars/Olympus_Mons", out var zone));
+        Assert.Equal(TimeZoneInfo.Utc, zone);
+        Assert.Equal(new DateOnly(2030, 1, 14), BranchDay.Today("Mars/Olympus_Mons", Utc(2030, 1, 14, 23)));
+    }
 }

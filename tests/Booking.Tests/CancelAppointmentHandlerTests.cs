@@ -136,7 +136,7 @@ public class CancelAppointmentHandlerTests
     public async Task A_Completed_Or_NoShow_Appointment_Is_409_And_Nothing_Changes(AppointmentStatus status, string detail)
     {
         var started = Book(Now.UtcDateTime.AddMinutes(-10));
-        if (status == AppointmentStatus.Completed) started.Complete(Now.UtcDateTime); else started.MarkNoShow(Now.UtcDateTime);
+        started.WithStatus(status, Now.UtcDateTime);
         Returns(started);
 
         var result = await Send(_owner, Constants.CustomerRole, started.Id);
@@ -169,7 +169,7 @@ public class CancelAppointmentHandlerTests
         var completed = Appointment.Book(
             _appointment.Id, _owner, _appointment.SlotId, _appointment.BranchId, _appointment.ServiceTypeId,
             _appointment.StartUtc, _appointment.EndUtc, Now.UtcDateTime.AddDays(-2));
-        completed.Complete(_appointment.StartUtc);
+        completed.WithStatus(AppointmentStatus.Completed, _appointment.StartUtc);
         _appointments.SetupSequence(r => r.GetByIdNoTrackingAsync(_appointment.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_appointment)
             .ReturnsAsync(completed);

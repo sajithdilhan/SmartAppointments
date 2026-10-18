@@ -25,10 +25,4 @@ public interface IRefreshTokenRepository
     /// Revokes every not-yet-revoked token of the family. Idempotent; returns the rows changed.
     /// </summary>
     Task<int> RevokeFamilyAsync(Guid familyId, DateTime nowUtc, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Revokes every not-yet-revoked token of every family of the user in one statement. Idempotent;
-    /// returns the rows changed.
-    /// </summary>
-    Task<int> RevokeAllForUserAsync(Guid userId, DateTime nowUtc, CancellationToken cancellationToken);
 }
