@@ -1,5 +1,13 @@
 # Staff booking — Tasks
 
+> **Manual verification (task 15).** Date 2026-10-18. `docker compose up --build -d` on the branch (both migrations applied at startup), a 45-check script (Python, `urllib`) through the gateway on 5290, with `docker exec ... psql` to move three appointments' start into the past and `docker stop`/`start` for the outage cases. `dotnet test SmartAppointments.slnx`: BuildingBlocks 73, Gateway 138, Availability 310, Booking 359, Auth 278, all passing. Two script bugs (wrong slot-search parameter name; checking a day whose appointments the script had moved) were fixed in the script; no product bug found.
+> - Staff accounts: create `201` (role Staff, branch), duplicate email `400 Email is already registered.`, unknown branch `422`, one `400` listing every rule, no token `401`, customer `403`; staff token carries `branch_id`, customer and admin tokens do not.
+> - Branch list (Galle, Asia/Colombo): staff `200` with the customer's name, ordered by start then id; admin any branch `200`; other-branch staff `403`, customer `403`, no token `401`; bad `date`/`status`/`page` together give one `400`; `pageSize=1` and the default date work. With Auth stopped: `200`, every `customer` null, `customersUnavailable: true`.
+> - `GET /api/appointments/{id}`: own-branch staff `200`, other-branch staff `404`.
+> - Marks: complete before start `409 The appointment has not started yet.`; after start `200` with `completedAtUtc`, repeat `200` with the same timestamp; no-show on a Completed one `409`; other-branch staff `404`; customer `403`; admin no-show `200`; customer cancel of a Completed one `409`. Concurrent complete and no-show on one appointment: one `200`, one `409`, one status stored. `/my?status=Completed` and `NoShow` list them; `status=Pending` `400`.
+> - Moves: with Availability stopped `503`; same branch `200` and the refresh token still works; a real move `200`, the old refresh token then `401`, a new login carries the new branch; unknown staff id `404`.
+> - `/internal/users/lookup` and `/internal/branches/{id}` are `404` through the gateway. `/healthz` Healthy; the new paths appear in the Booking and Auth OpenAPI documents through the gateway.
+
 > Each task leaves the solution building and `dotnet test SmartAppointments.slnx` green, and is ticked in the same commit as its code. Chunks A, B and C run in parallel after task 0; chunk D follows C (it edits the same controller and repository); chunk E is last. The design is final; any deviation is recorded at the end of `design.md`.
 
 ## Chunk 0 — Shared constant (orchestrator)
@@ -105,6 +113,6 @@
   - `docs/requirements.md`: FR-AUTH-006 and the endpoint drafts; `CLAUDE.md` service descriptions; `docs/specs/README.md` row
   - _Requirements: 12.1, 12.3, 12.4_
 
-- [ ] 15. Manual verification through the gateway (orchestrator)
+- [x] 15. Manual verification through the gateway (orchestrator)
   - The plan's end-to-end checks on `docker compose up --build`, results recorded at the top of this file
   - _Requirements: 12.5_

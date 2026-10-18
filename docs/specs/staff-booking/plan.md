@@ -1,6 +1,6 @@
 # Staff booking — Plan
 
-**Status:** Accepted (2026-10-18)
+**Status:** Implemented (2026-10-18)
 
 ## Problem and goal
 

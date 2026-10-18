@@ -1,6 +1,6 @@
 # RFC-0001: Staff branch assignment and branch appointment operations
 
-**Status:** Accepted
+**Status:** Implemented
 **Author:** Sajith Dilhan (drafted with Claude Code)
 **Created:** 2026-10-18
 **Related:** [`docs/specs/staff-booking/plan.md`](../specs/staff-booking/plan.md); FR-BKG-004, FR-BKG-006, FR-AUTH-003, FR-AUTH-006 (new)

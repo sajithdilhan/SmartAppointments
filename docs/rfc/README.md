@@ -31,4 +31,4 @@ Start from [`_template.md`](_template.md).
 
 | Number | Title | Status | Created | Related |
 |---|---|---|---|---|
-| [0001](0001-staff-branch-assignment.md) | Staff branch assignment and branch appointment operations | Accepted | 2026-10-18 | [staff-booking](../specs/staff-booking/plan.md) |
+| [0001](0001-staff-branch-assignment.md) | Staff branch assignment and branch appointment operations | Implemented | 2026-10-18 | [staff-booking](../specs/staff-booking/plan.md) |

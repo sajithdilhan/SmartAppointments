@@ -202,6 +202,25 @@ public class RefreshTokenCommandHandlerTests
     }
 
     [Fact]
+    public async Task A_Token_Revoked_By_A_Branch_Move_Is_401_And_Issues_Nothing()
+    {
+        // A branch move revokes the staff member's tokens in place: RevokedAtUtc set, ReplacedById null.
+        var user = CreateUser(UserRole.Staff);
+        var stored = StartFamily(user, Now.AddDays(-1));
+        Revoke(stored);
+        Assert.Null(stored.ReplacedById);
+        Arrange(stored, user);
+
+        var result = await CreateSubject().Handle(new RefreshTokenCommand(Presented), CancellationToken.None);
+
+        AssertUnauthorized(result);
+        _refreshTokens.Verify(r => r.TryRotateAsync(It.IsAny<Guid>(), It.IsAny<RefreshToken>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        _refreshTokens.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Never);
+        _tokenGenerator.Verify(t => t.GenerateAccessToken(It.IsAny<User>()), Times.Never);
+        _tokenGenerator.Verify(t => t.GenerateRefreshToken(), Times.Never);
+    }
+
+    [Fact]
     public async Task A_Revoked_And_Expired_Token_Still_Revokes_The_Family()
     {
         var user = CreateUser(UserRole.Customer);

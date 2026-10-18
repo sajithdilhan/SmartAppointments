@@ -147,6 +147,23 @@ public class CancelAppointmentHandlerTests
         _availability.VerifyNoOtherCalls();
     }
 
+    [Theory]
+    [InlineData(AppointmentStatus.Completed, "The appointment is Completed and can no longer be cancelled.")]
+    [InlineData(AppointmentStatus.NoShow, "The appointment is NoShow and can no longer be cancelled.")]
+    public async Task A_Completed_Or_NoShow_Appointment_Before_Its_Start_Is_409_And_Nothing_Changes(AppointmentStatus status, string detail)
+    {
+        var future = Book(Now.UtcDateTime.AddDays(1));
+        future.WithStatus(status, Now.UtcDateTime);
+        Returns(future);
+
+        var result = await Send(_owner, Constants.CustomerRole, future.Id);
+
+        Assert.Equal(409, result.Error!.Status);
+        Assert.Equal(detail, result.Error.Details);
+        VerifyNoTransition();
+        _availability.Verify(a => a.ReleaseAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task Losing_The_Race_To_Another_Cancel_Takes_The_Repeat_Path_And_Releases()
     {
