@@ -1,5 +1,6 @@
 ﻿using Auth.Application.Abstractions;
 using Auth.Application.Models;
+using Auth.Infrastructure.Clients;
 using Auth.Infrastructure.Persistence;
 using Auth.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,8 @@ public static class DependencyInjection
                 "'dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"<connection string>\"' " +
                 "for local development, or through the environment in every other environment.");
         }
+
+        services.AddAvailabilityClient(configuration);
 
         // Register infrastructure services here
         services.AddScoped<IPasswordHasher, PasswordHasher>();

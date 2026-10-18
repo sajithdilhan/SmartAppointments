@@ -17,31 +17,31 @@
 
 ## Chunk B — Auth
 
-- [ ] 2. Domain and persistence
+- [x] 2. Domain and persistence
   - `User.BranchId`; `RegisterStaff(..., Guid branchId)` (non-empty guard); `AssignBranch(Guid)` (Staff only, non-empty); update the three test callers
   - EF config and migration `AddStaffBranch` (nullable `BranchId`, index `IX_RefreshTokens_UserId_RevokedAtUtc`)
   - `IUserRepository.GetForUpdateByIdAsync`, `ListByIdsAsync`; `IRefreshTokenRepository.RevokeAllForUserAsync` (`ExecuteUpdateAsync` on `UserId && RevokedAtUtc == null`)
   - Tests: `UserTests` for the factory and `AssignBranch` guards
   - _Requirements: 1.1, 2.1, 10.1, 10.3_
 
-- [ ] 3. `branch_id` claim
+- [x] 3. `branch_id` claim
   - `TokenGenerator` adds `Constants.BranchIdClaimType` for Staff with a branch only
   - Tests: `TokenGeneratorTests` (Staff with branch, Customer, Admin); `RefreshTokenCommandHandlerTests` case showing the token is generated from the re-read user
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 4. Availability client and configuration
+- [x] 4. Availability client and configuration
   - `IAvailabilityClient.GetBranchAsync` + `BranchInfo` (Application); `Clients/AvailabilityClient` and `AddAvailabilityClient` copied from Booking (base URL and key required, `CorrelationIdHandler`, standard resilience, 5 s / 20 s); `Microsoft.Extensions.Http.Resilience` package; call it from `AddInfrastructure`
   - `appsettings.json` (`InternalApi:Key` and `Services:Availability:BaseUrl` empty), `appsettings.Development.json` (dev key, `http://localhost:5202`)
   - Tests: `AvailabilityClientTests` (200, 404 → null, 401, 5xx, timeout, path and `X-API-Key`, DI startup failures); shipped-settings check of the new keys
   - _Requirements: 1.4, 11.3, 11.4_
 
-- [ ] 5. Create and move staff
+- [x] 5. Create and move staff
   - `CreateStaffCommand`/`Request`, `AssignStaffBranchCommand`/`Request`, `StaffResponse`; validators (register rules + branch; branch) registered in `AddApplication`; `CreateStaffHandler`, `AssignStaffBranchHandler` per the design (order of checks, `422`/`503`, same-branch no-op, save then `RevokeAllForUserAsync`)
   - `StaffController` (`api/auth/staff`, `AdminPolicy`; `POST` → `201`, `PUT {id:guid}/branch` → `200`)
   - Tests: `CreateStaffHandlerTests`, `AssignStaffBranchHandlerTests`, the two validator test classes, `StaffControllerTests`
   - _Requirements: 1.1–1.6, 2.1–2.6, 10.1, 10.2_
 
-- [ ] 6. Internal user lookup
+- [x] 6. Internal user lookup
   - `AddApiKeyAuthentication(builder.Configuration)` in Auth `Program.cs` after `AddJwtAuthentication`
   - `LookupUsersQuery(Ids)`, validator (1–100, no empty), `LookupUsersHandler` (de-duplicate, `ListByIdsAsync`), `UserLookupItem`; `InternalUsersController` (`internal/users`, `InternalServicePolicy`, `POST lookup`)
   - Tests: `LookupUsersHandlerTests`, `LookupUsersQueryValidatorTests`, `InternalUsersControllerTests`

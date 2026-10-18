@@ -27,5 +27,15 @@ public interface IUserRepository
     /// </summary>
     Task<User?> GetForUpdateByEmailAsync(string email, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Reads a user by id that the caller intends to modify. Changes are persisted by <see cref="SaveChangesAsync"/>.
+    /// </summary>
+    Task<User?> GetForUpdateByIdAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads the users with these ids (no tracking). Unknown ids are simply absent.
+    /// </summary>
+    Task<IReadOnlyList<User>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

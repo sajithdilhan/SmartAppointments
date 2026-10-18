@@ -28,6 +28,16 @@ public class UserRepository(ApplicationDbContext context) : IUserRepository
         return await QueryByEmail(context.Users, email, cancellationToken);
     }
 
+    public async Task<User?> GetForUpdateByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return await context.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<User>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        return await context.Users.AsNoTracking().Where(u => ids.Contains(u.Id)).ToListAsync(cancellationToken);
+    }
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         try

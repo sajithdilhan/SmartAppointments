@@ -29,6 +29,9 @@ public sealed class User
 
     public DateTime? LastLoginAtUtc { get; private set; }
 
+    /// <summary>The branch a Staff user works at; null for every other role.</summary>
+    public Guid? BranchId { get; private set; }
+
     public static User RegisterCustomer(
         string firstName,
         string lastName,
@@ -55,8 +58,14 @@ public sealed class User
         string lastName,
         Email email,
         string phoneNumber,
-        string passwordHash)
+        string passwordHash,
+        Guid branchId)
     {
+        if (branchId == Guid.Empty)
+        {
+            throw new ArgumentException("A staff member requires a branch.", nameof(branchId));
+        }
+
         return new User
         {
             Id = Guid.CreateVersion7(),
@@ -67,7 +76,8 @@ public sealed class User
             PasswordHash = passwordHash,
             Role = UserRole.Staff,
             RegistrationDateUtc = DateTime.UtcNow,
-            IsActive = true
+            IsActive = true,
+            BranchId = branchId
         };
     }
 
@@ -107,6 +117,21 @@ public sealed class User
     public void Activate()
     {
         IsActive = true;
+    }
+
+    public void AssignBranch(Guid branchId)
+    {
+        if (Role != UserRole.Staff)
+        {
+            throw new InvalidOperationException("Only a staff user can be assigned to a branch.");
+        }
+
+        if (branchId == Guid.Empty)
+        {
+            throw new ArgumentException("A branch is required.", nameof(branchId));
+        }
+
+        BranchId = branchId;
     }
 
     public void ChangePassword(string newPasswordHash)

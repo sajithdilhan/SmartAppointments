@@ -61,7 +61,7 @@ namespace Auth.Infrastructure.Persistence.Migrations
                     b.HasIndex("TokenHash")
                         .IsUnique();
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "RevokedAtUtc");
 
                     b.ToTable("RefreshTokens", (string)null);
                 });
@@ -70,6 +70,9 @@ namespace Auth.Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("BranchId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Email")

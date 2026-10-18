@@ -4,6 +4,7 @@ using Auth.Domain.Entities;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SmartAppointments.BuildingBlocks;
+using SmartAppointments.BuildingBlocks.Enums;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -35,16 +36,25 @@ public class TokenGenerator(IOptions<JwtOptions> options, TimeProvider timeProvi
 
         var key = Encoding.UTF8.GetBytes(options.Value.SecretKey);
         var securityKey = new SymmetricSecurityKey(key);
+        var claims = new List<Claim>
+        {
+            new(Constants.UserIdClaimType, user.Id.ToString()),
+            new(Constants.EmailClaimType, user.Email.Value),
+            new(Constants.RoleClaimType, user.Role.ToString())
+        };
+
+        // Only a Staff user with a branch carries it; read from the user passed in, so a refresh
+        // (which re-reads the user) always reflects the current assignment.
+        if (user.Role == UserRole.Staff && user.BranchId is { } branchId)
+        {
+            claims.Add(new Claim(Constants.BranchIdClaimType, branchId.ToString()));
+        }
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             // Short claim names are emitted deliberately: JwtBearer is configured with
             // MapInboundClaims = false, so whatever is written here is what is read back.
-            Subject = new ClaimsIdentity(new[]
-            {
-            new Claim(Constants.UserIdClaimType, user.Id.ToString()),
-            new Claim(Constants.EmailClaimType, user.Email.Value),
-            new Claim(Constants.RoleClaimType, user.Role.ToString())
-        }),
+            Subject = new ClaimsIdentity(claims),
             IssuedAt = now,
             NotBefore = now,
             Expires = expires,

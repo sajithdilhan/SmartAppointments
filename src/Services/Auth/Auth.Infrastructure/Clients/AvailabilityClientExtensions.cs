@@ -1,0 +1,51 @@
+using Auth.Application.Abstractions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using SmartAppointments.BuildingBlocks;
+using SmartAppointments.BuildingBlocks.Web.Http;
+
+namespace Auth.Infrastructure.Clients;
+
+public static class AvailabilityClientExtensions
+{
+    public static IServiceCollection AddAvailabilityClient(this IServiceCollection services, IConfiguration configuration)
+    {
+        var baseUrl = configuration["Services:Availability:BaseUrl"];
+        if (string.IsNullOrWhiteSpace(baseUrl) || !Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
+        {
+            throw new InvalidOperationException(
+                "'Services:Availability:BaseUrl' is not configured or is not an absolute URL. Set it to the " +
+                "Availability service's address, for example 'http://localhost:5202'.");
+        }
+
+        var apiKey = configuration["InternalApi:Key"];
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new InvalidOperationException(
+                "'InternalApi:Key' is not configured. It must equal the key Availability expects: set it with " +
+                "'dotnet user-secrets' locally, or through the environment ('InternalApi__Key') everywhere else.");
+        }
+
+        services.AddHttpContextAccessor();
+        services.AddTransient<CorrelationIdHandler>();
+
+        services.AddHttpClient<IAvailabilityClient, AvailabilityClient>(client =>
+            {
+                client.BaseAddress = baseUri;
+                // Never logged: LoggingMiddleware logs only the method and path.
+                client.DefaultRequestHeaders.Add(Constants.ApiKeyHeaderName, apiKey);
+            })
+            // Before the resilience handler, so every retry carries the same correlation id.
+            .AddHttpMessageHandler<CorrelationIdHandler>()
+            .AddStandardResilienceHandler(options =>
+            {
+                options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5);
+                options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(20);
+                // The standard retry strategy retries every HTTP method. That is safe here because
+                // the only call is a read (GET). Do not add a non-idempotent call to this client
+                // without changing that.
+            });
+
+        return services;
+    }
+}

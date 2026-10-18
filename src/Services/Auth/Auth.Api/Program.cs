@@ -16,6 +16,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddControllers().AddSharedProblemDetails();
 builder.Services.AddOpenApiWithBearerAuth();
 builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddApiKeyAuthentication(builder.Configuration);
 builder.Services.AddAuthorizationWithRoles();
 
 var app = builder.Build();
