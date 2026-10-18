@@ -1,4 +1,12 @@
 @Auth.Api_HostAddress = http://localhost:5008
+# An Admin access token from POST /api/auth/login (staff management is admin-only).
+@AdminToken = <paste token>
+# The id of an active branch from the Availability service.
+@BranchId = <paste id>
+# The id of a staff user, from the create-staff response.
+@StaffId = <paste id>
+# The internal API key: InternalApi:Key in appsettings.Development.json (the same value Booking sends).
+@InternalApiKey = dev-internal-api-key-3f9a7c1e5b2d4a68-smartappointments
 
 # The Auth service directly (not through the gateway, so no rate limits).
 
@@ -29,6 +37,62 @@ Content-Type: application/json
 
 {
   "refreshToken": "<paste refreshToken from login>"
+}
+
+###
+
+# ---- Staff accounts (admin only) -------------------------------------------
+
+# 201 with the new staff user. 422 when the branch does not exist or is inactive; 503 when
+# Availability is unreachable; 400 for invalid data or an email that is already registered.
+POST {{Auth.Api_HostAddress}}/api/auth/staff
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "firstName": "Kamal",
+  "lastName": "Perera",
+  "email": "kamal.staff@example.com",
+  "phoneNumber": "+94771234567",
+  "password": "Passw0rd!Passw0rd",
+  "branchId": "{{BranchId}}"
+}
+
+###
+
+# Moves the staff member to another branch and ends all their refresh-token sessions; access tokens
+# already issued keep the old branch until they expire. 404 for an unknown id or a non-staff user.
+PUT {{Auth.Api_HostAddress}}/api/auth/staff/{{StaffId}}/branch
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "branchId": "{{BranchId}}"
+}
+
+###
+
+# 422: a branch id that does not exist (or is inactive).
+PUT {{Auth.Api_HostAddress}}/api/auth/staff/{{StaffId}}/branch
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "branchId": "00000000-0000-7000-8000-00000000dead"
+}
+
+###
+
+# ---- Internal (service-to-service) -----------------------------------------
+
+# Authenticated by X-API-Key only: a bearer token gets 401 here. Unknown ids are omitted from the
+# response and duplicates are returned once.
+POST {{Auth.Api_HostAddress}}/internal/users/lookup
+X-API-Key: {{InternalApiKey}}
+Content-Type: application/json
+
+{
+  "ids": ["{{StaffId}}"]
 }
 
 ###

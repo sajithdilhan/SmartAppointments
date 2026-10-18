@@ -268,3 +268,16 @@ Every criterion in requirements 1 to 12 maps to a decision above:
 ## Open questions
 
 None. The new public endpoints are visible in OpenAPI through the existing `AddOpenApiWithBearerAuth`. Internal endpoints also appear in each service's own document, as `/internal/slots` does today.
+
+## Implementation deviations
+
+Where the code differs from, or fills a gap in, the design above:
+
+- `CancelAppointmentHandler`: when the conditional update loses a race, the re-read returns `404` if the appointment has vanished in the meantime.
+- `MarkAppointmentHandler` re-reads the appointment after every `TryTransitionAsync` and re-applies the branch check to the re-read copy.
+- EF Core dropped `IX_RefreshTokens_UserId` in favour of the composite `(UserId, RevokedAtUtc)` index, which serves the same lookups; `Down` recreates the old index.
+- The lookup body is `LookupUsersRequest(List<Guid>? Ids)`, mapped to `LookupUsersQuery`. A non-GUID value in the list is a model-binding `400`, not a validator failure.
+- `BranchInfo` lives in `Booking.Application/Models`.
+- `CachedBranchTimeZoneProvider` is registered as scoped.
+- `Auth.Infrastructure` references `BuildingBlocks.Web` for `CorrelationIdHandler`, as `Booking.Infrastructure` already does.
+- `BranchDay` moves a local midnight that falls in a DST gap forward in 30-minute steps until it exists.

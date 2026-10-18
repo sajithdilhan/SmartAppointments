@@ -99,7 +99,7 @@
 
 ## Chunk E — Delivery
 
-- [ ] 14. Compose, `.http`, BRD and docs
+- [x] 14. Compose, `.http`, BRD and docs
   - `docker-compose.yml`: Auth `InternalApi__Key`, `Services__Availability__BaseUrl: http://availability:8080`; Booking `Services__Auth__BaseUrl: http://auth:8080`
   - `.http` requests for the new public endpoints (Auth and Booking files)
   - `docs/requirements.md`: FR-AUTH-006 and the endpoint drafts; `CLAUDE.md` service descriptions; `docs/specs/README.md` row

@@ -67,6 +67,45 @@ Authorization: Bearer {{CustomerToken}}
 
 ###
 
-# Invalid: one 400 naming both parameters.
-GET {{Booking.Api_HostAddress}}/api/appointments/my?status=Completed&page=0
+# Attended appointments (statuses: Booked, Cancelled, Completed, NoShow).
+GET {{Booking.Api_HostAddress}}/api/appointments/my?status=Completed
 Authorization: Bearer {{CustomerToken}}
+
+###
+
+# Invalid: one 400 naming both parameters.
+GET {{Booking.Api_HostAddress}}/api/appointments/my?status=Pending&page=0
+Authorization: Bearer {{CustomerToken}}
+
+###
+
+# ---- Staff and admin: a branch's day ---------------------------------------
+
+# A Staff token carries the branch_id claim set by Auth; an Admin token has none.
+@StaffToken = <paste token>
+@BranchId = <paste id>
+
+# One branch's appointments for a day (yyyy-MM-dd in the branch's time zone; default today), soonest
+# first, with the customer's name and phone. Staff: their own branch only, anything else is 403.
+# Optional status, page and pageSize. customersUnavailable is true when Auth could not be reached.
+GET {{Booking.Api_HostAddress}}/api/appointments/branch/{{BranchId}}?date=2026-10-05&status=Booked&page=1&pageSize=20
+Authorization: Bearer {{StaffToken}}
+
+###
+
+# Admins may read any branch.
+GET {{Booking.Api_HostAddress}}/api/appointments/branch/{{BranchId}}?date=2026-10-05
+Authorization: Bearer {{AdminToken}}
+
+###
+
+# Staff of the appointment's branch, or an Admin. 200 with the appointment; repeating it is 200 too.
+# 409 before the appointment has started or when it is already Cancelled or NoShow; another branch is 404.
+POST {{Booking.Api_HostAddress}}/api/appointments/{{AppointmentId}}/complete
+Authorization: Bearer {{StaffToken}}
+
+###
+
+# The customer did not turn up. Same rules as complete.
+POST {{Booking.Api_HostAddress}}/api/appointments/{{AppointmentId}}/no-show
+Authorization: Bearer {{StaffToken}}

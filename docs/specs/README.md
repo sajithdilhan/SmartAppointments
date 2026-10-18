@@ -38,8 +38,9 @@ Templates live in [`_templates/`](_templates/).
 | API gateway | Implemented | — (refines BRD gateway row, 11.5 rate limiting, correlation-ID NFR) | [requirements](api-gateway/requirements.md) · [design](api-gateway/design.md) · [tasks](api-gateway/tasks.md) |
 | Local orchestration | Implemented | — (refines BRD 4.1, 15, 16 Docker Compose) | [requirements](local-orchestration/requirements.md) · [design](local-orchestration/design.md) · [tasks](local-orchestration/tasks.md) |
 | Gateway CORS | Implemented | — (browser access to the gateway; refines the API gateway spec's out-of-scope CORS line) | [requirements](gateway-cors/requirements.md) · [design](gateway-cors/design.md) · [tasks](gateway-cors/tasks.md) |
+| Staff booking | Implemented | FR-BKG-004, FR-BKG-006, FR-AUTH-003, FR-AUTH-006 | [requirements](staff-booking/requirements.md) · [design](staff-booking/design.md) · [tasks](staff-booking/tasks.md) |
 
-Features named in `docs/requirements.md` but not yet specced: the rest of appointment booking (FR-BKG-004, FR-BKG-006), walk-in queue (FR-QUE-*), notifications (FR-NOT-001), reporting (FR-RPT-*).
+Features named in `docs/requirements.md` but not yet specced: walk-in queue (FR-QUE-*), notifications (FR-NOT-001), reporting (FR-RPT-*).
 
 ## Retro-fitted specs
 
