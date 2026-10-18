@@ -15,4 +15,22 @@ public class ShippedSettingsTests
 
         Assert.False(DatabaseMigrator.IsEnabled(configuration));
     }
+
+    [Fact]
+    public void The_Auth_Base_Url_Ships_Empty()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "ApiSettings", "appsettings.json");
+        var configuration = new ConfigurationBuilder().AddJsonFile(path, optional: false).Build();
+
+        Assert.Equal(string.Empty, configuration["Services:Auth:BaseUrl"]);
+    }
+
+    [Fact]
+    public void The_Development_Auth_Base_Url_Is_The_Local_Auth_Service()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "ApiSettings", "appsettings.Development.json");
+        var configuration = new ConfigurationBuilder().AddJsonFile(path, optional: false).Build();
+
+        Assert.Equal("http://localhost:5008", configuration["Services:Auth:BaseUrl"]);
+    }
 }

@@ -306,6 +306,87 @@ public class AppointmentsControllerTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    private static BranchAppointmentsPage EmptyBranchPage() => new([], 1, 20, 0, false);
+
+    [Fact]
+    public async Task GetByBranch_Sends_The_Role_Branch_Claim_And_Raw_Query_Strings()
+    {
+        var claimBranch = Guid.CreateVersion7();
+        _sender.Setup(s => s.Send(It.IsAny<ListBranchAppointmentsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<BranchAppointmentsPage>.Success(EmptyBranchPage()));
+
+        var result = await Controller(role: Constants.StaffRole, branchClaim: claimBranch.ToString())
+            .GetByBranch(BranchId, "2030-03-10", "noshow", "2", "5", CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        _sender.Verify(s => s.Send(
+            new ListBranchAppointmentsQuery(BranchId, "2030-03-10", "noshow", "2", "5", Constants.StaffRole, claimBranch),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("not-a-guid")]
+    [InlineData("00000000-0000-0000-0000-000000000000")]
+    public async Task GetByBranch_Treats_A_Missing_Or_Bad_Branch_Claim_As_Null(string? claim)
+    {
+        _sender.Setup(s => s.Send(It.IsAny<ListBranchAppointmentsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<BranchAppointmentsPage>.Success(EmptyBranchPage()));
+
+        await Controller(role: Constants.StaffRole, branchClaim: claim)
+            .GetByBranch(BranchId, null, null, null, null, CancellationToken.None);
+
+        _sender.Verify(s => s.Send(
+            new ListBranchAppointmentsQuery(BranchId, null, null, null, null, Constants.StaffRole, null),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetByBranch_Keeps_An_Empty_Query_Value_Empty()
+    {
+        _sender.Setup(s => s.Send(It.IsAny<ListBranchAppointmentsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<BranchAppointmentsPage>.Success(EmptyBranchPage()));
+        var controller = Controller(role: Constants.AdminRole);
+        controller.HttpContext.Request.QueryString = new QueryString("?date=&status=");
+
+        await controller.GetByBranch(BranchId, null, null, null, null, CancellationToken.None);
+
+        _sender.Verify(s => s.Send(
+            new ListBranchAppointmentsQuery(BranchId, "", "", null, null, Constants.AdminRole, null),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(400)]
+    [InlineData(403)]
+    [InlineData(503)]
+    public async Task GetByBranch_Failure_Maps_To_The_Handler_Status(int status)
+    {
+        _sender.Setup(s => s.Send(It.IsAny<ListBranchAppointmentsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<BranchAppointmentsPage>.Failure(new Error(status, "x")));
+
+        var result = await Controller(role: Constants.AdminRole)
+            .GetByBranch(BranchId, null, null, null, null, CancellationToken.None);
+
+        Assert.Equal(status, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
+    }
+
+    [Fact]
+    public async Task GetByBranch_Without_A_Valid_Sub_Is_401()
+    {
+        var result = await Controller(withSub: false, role: Constants.AdminRole)
+            .GetByBranch(BranchId, null, null, null, null, CancellationToken.None);
+
+        Assert.IsType<UnauthorizedObjectResult>(result);
+    }
+
+    [Fact]
+    public void GetByBranch_Is_Routed_As_Branch_With_A_Guid()
+    {
+        Assert.Equal("branch/{branchId:guid}", typeof(AppointmentsController)
+            .GetMethod(nameof(AppointmentsController.GetByBranch))!.GetCustomAttribute<HttpGetAttribute>()!.Template);
+    }
+
     [Fact]
     public async Task GetMine_Failure_400_Maps_To_400()
     {
@@ -342,6 +423,7 @@ public class AppointmentsControllerTests
     [InlineData(nameof(AppointmentsController.Cancel), Constants.AllowedOriginsPolicy)]
     [InlineData(nameof(AppointmentsController.Complete), Constants.AdminOrStaffPolicy)]
     [InlineData(nameof(AppointmentsController.NoShow), Constants.AdminOrStaffPolicy)]
+    [InlineData(nameof(AppointmentsController.GetByBranch), Constants.AdminOrStaffPolicy)]
     public void Each_Action_Carries_Its_Policy(string action, string policy)
     {
         var attribute = typeof(AppointmentsController).GetMethod(action)!.GetCustomAttribute<AuthorizeAttribute>();

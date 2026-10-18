@@ -76,13 +76,13 @@
 
 ## Chunk D — Booking branch day list
 
-- [ ] 11. Day and parameters
+- [x] 11. Day and parameters
   - `BranchDay.Today` and `ToUtcRange` (IANA zones, UTC fallback for null or unknown ids, DST gap handling)
   - `BranchAppointmentsParameters` (`TryParseDate` `yyyy-MM-dd`, four statuses, page and size shared with `/my`)
   - Tests: `BranchDayTests` (Auckland and New York ordinary days, both DST changes giving 23 h and 25 h, UTC fallback, unknown zone), `BranchAppointmentsParametersTests`
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.6_
 
-- [ ] 12. Clients and zone provider
+- [x] 12. Clients and zone provider
   - `IAvailabilityClient.GetBranchAsync` in Booking (`BranchInfo`; 404 → `Success(null)`)
   - `IAuthClient` + `CustomerInfo`; `Clients/AuthClient` and `AddAuthClient` (`Services:Auth:BaseUrl` required, same handlers)
   - `IBranchTimeZoneProvider` + `CachedBranchTimeZoneProvider` (`IMemoryCache`, 5 minutes, no failure caching); `AddMemoryCache`
@@ -90,7 +90,7 @@
   - Tests: `AvailabilityClientTests` additions, `AuthClientTests`, `CachedBranchTimeZoneProviderTests`, shipped-settings check
   - _Requirements: 5.4, 6.3, 11.3, 11.4_
 
-- [ ] 13. Branch list query and endpoint
+- [x] 13. Branch list query and endpoint
   - `ListBranchAppointmentsQuery` (raw strings, caller role and branch), validator, `ListBranchAppointmentsHandler` per the design; `BranchAppointmentResponse`, `CustomerSummary`, `BranchAppointmentsPage`
   - `IAppointmentRepository.ListForBranchAsync`
   - `AppointmentsController`: `GET branch/{branchId:guid}` (`AdminOrStaffPolicy`)

@@ -15,4 +15,7 @@ public interface IAvailabilityClient
     Task<Result<bool>> ReserveAsync(Guid slotId, Guid appointmentId, CancellationToken cancellationToken);
 
     Task<Result<bool>> ReleaseAsync(Guid slotId, Guid appointmentId, CancellationToken cancellationToken);
+
+    /// <summary>Success(null) is a 404 (unknown branch); Failure(503) is any outage.</summary>
+    Task<Result<BranchInfo?>> GetBranchAsync(Guid branchId, CancellationToken cancellationToken);
 }

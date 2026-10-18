@@ -161,6 +161,77 @@ public class AvailabilityClientTests
     }
 
     [Fact]
+    public async Task GetBranch_Ok_Returns_The_Branch_From_The_Internal_Path()
+    {
+        var branchId = Guid.CreateVersion7();
+        var (client, handler) = Create(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new { id = branchId, isActive = false, timeZoneId = "Pacific/Auckland" })
+        });
+
+        var result = await client.GetBranchAsync(branchId, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(new Booking.Application.Models.BranchInfo(branchId, false, "Pacific/Auckland"), result.Value);
+        Assert.Equal(HttpMethod.Get, handler.Requests[0].Method);
+        Assert.Equal($"/internal/branches/{branchId}", handler.Requests[0].RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task GetBranch_With_No_Schedule_Has_A_Null_Zone()
+    {
+        var branchId = Guid.CreateVersion7();
+        var (client, _) = Create(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new { id = branchId, isActive = true, timeZoneId = (string?)null })
+        });
+
+        var result = await client.GetBranchAsync(branchId, CancellationToken.None);
+
+        Assert.Null(result.Value!.TimeZoneId);
+    }
+
+    [Fact]
+    public async Task GetBranch_NotFound_Is_A_Successful_Null()
+    {
+        var (client, _) = Create(HttpStatusCode.NotFound);
+
+        var result = await client.GetBranchAsync(Guid.CreateVersion7(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    public async Task GetBranch_Rejected_Key_And_Server_Errors_Map_To_503(HttpStatusCode status)
+    {
+        var (client, _) = Create(status);
+
+        Assert.Equal(503, (await client.GetBranchAsync(Guid.CreateVersion7(), CancellationToken.None)).Error!.Status);
+    }
+
+    [Theory]
+    [MemberData(nameof(Outages))]
+    public async Task GetBranch_Network_Timeout_And_Open_Circuit_Map_To_503(Exception failure)
+    {
+        var (client, _) = Create(_ => throw failure);
+
+        Assert.Equal(503, (await client.GetBranchAsync(Guid.CreateVersion7(), CancellationToken.None)).Error!.Status);
+    }
+
+    [Fact]
+    public async Task GetBranch_With_An_Unreadable_Body_Is_503()
+    {
+        var (client, _) = Create(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("nope", System.Text.Encoding.UTF8, "application/json") });
+
+        Assert.Equal(503, (await client.GetBranchAsync(Guid.CreateVersion7(), CancellationToken.None)).Error!.Status);
+    }
+
+    [Fact]
     public async Task A_Cancelled_Caller_Is_Not_Reported_As_An_Outage()
     {
         using var cts = new CancellationTokenSource();

@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
         services.AddScoped<IValidator<CreateAppointmentCommand>, CreateAppointmentCommandValidator>();
         services.AddScoped<IValidator<ListMyAppointmentsQuery>, ListMyAppointmentsQueryValidator>();
+        services.AddScoped<IValidator<ListBranchAppointmentsQuery>, ListBranchAppointmentsQueryValidator>();
         return services;
     }
 }

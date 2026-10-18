@@ -78,6 +78,41 @@ public class AppointmentsController(ISender sender) : ControllerBase
         return Ok(result.Value);
     }
 
+    /// <summary>
+    /// One branch's appointments for a day (<c>date</c>, yyyy-MM-dd in the branch's time zone; default today),
+    /// soonest first, with the customer's name and phone. Staff see their own branch only; admins any.
+    /// Optional <c>status</c> (Booked, Cancelled, Completed, NoShow), <c>page</c> (default 1) and
+    /// <c>pageSize</c> (default 20, max 100).
+    /// </summary>
+    // Raw strings for the same reason as GetMine.
+    [HttpGet("branch/{branchId:guid}")]
+    [Authorize(Policy = Constants.AdminOrStaffPolicy)]
+    public async Task<IActionResult> GetByBranch(
+        Guid branchId,
+        [FromQuery] string? date,
+        [FromQuery] string? status,
+        [FromQuery] string? page,
+        [FromQuery] string? pageSize,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetCaller(out _, out var role))
+        {
+            return Unauthorised();
+        }
+
+        var result = await sender.Send(
+            new ListBranchAppointmentsQuery(
+                branchId, Raw("date", date), Raw("status", status), Raw("page", page), Raw("pageSize", pageSize),
+                role, CallerBranchId), cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return this.ToActionResult(result.Error!);
+        }
+
+        return Ok(result.Value);
+    }
+
     [HttpGet("{id:guid}")]
     [Authorize(Policy = Constants.AllowedOriginsPolicy)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
