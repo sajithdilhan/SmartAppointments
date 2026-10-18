@@ -137,7 +137,7 @@ A bug fix or a one-file tweak that involves no design decision may skip the plan
 | 1-2 Review and acceptance | `/plan-review <feature>` | Runs `plan-reviewer` (and `architecture-reviewer` on the RFC), then takes the plan to user acceptance (stage 2). |
 | 2 Acceptance | `/spec-new <feature>` | Writes `requirements.md`, stops for approval. |
 | 2 Acceptance | `/spec-design <feature>` | Writes `design.md`, stops for approval. |
-| 2 Acceptance | `/adr-new <title>` | Writes an ADR as `Proposed`. Use during design. |
+| 2 Acceptance | `/adr-new <title>` | Writes an ADR as `Proposed` (or `Accepted` when derived from an accepted RFC via `/plan-review`). Use during design. |
 | 2 Acceptance | `/spec-tasks <feature>` | Writes `tasks.md`, stops for approval. |
 | 3 Implementation | `/spec-execute <feature>` | Runs `implementer` chunks and commits after review. |
 | 4 and 5 Reviews | `/review` | Runs `code-reviewer` and `architecture-reviewer` in parallel. |

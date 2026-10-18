@@ -1,5 +1,5 @@
 ---
-description: Create the next numbered ADR from docs/adr/_template.md (Status Proposed) and index it
+description: Create the next numbered ADR from docs/adr/_template.md (Status Proposed, or Accepted when derived from an accepted RFC) and index it
 argument-hint: <title>
 ---
 Create an ADR titled: $ARGUMENTS. One ADR records exactly one decision. See `docs/WORKFLOW.md`.
