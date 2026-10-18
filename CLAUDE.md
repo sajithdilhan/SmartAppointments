@@ -19,7 +19,7 @@ Every feature follows the process in [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (ado
 - **RFC** only for cross-cutting changes: a new service, a new infrastructure dependency (RabbitMQ, Redis, outbox), a change to an inter-service contract or to `BuildingBlocks`/`BuildingBlocks.Web`, or a change touching two or more services. Otherwise plan + spec + ADRs.
 - **ADR** for each decision that is hard to reverse, crosses features or services, chooses between real alternatives or departs from a convention. One decision per ADR; accepted ADRs are never edited except their status, a later ADR supersedes them. Decisions made before 2026-10-17 are recorded in the specs and this file, not as ADRs.
 - Agents live in `.claude/agents/` and commands in `.claude/commands/`. Use the subagents for every stage they cover, running independent ones in parallel (always on Sonnet, see below).
-- Small changes (a bug fix or one-file tweak with no design decision) can skip plan and spec, but still get code review and verification.
+- Small changes (a bug fix or one-file tweak with no design decision) can skip plan and spec, but still get code review, architecture review (no-spec mode) and verification, and still end in a PR.
 - Done means the full test suite passes **and** a PR is raised.
 
 ## Project status

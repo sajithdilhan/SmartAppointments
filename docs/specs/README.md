@@ -19,7 +19,7 @@ plan.md  ──►  requirements.md  ──►  design.md  ──►  tasks.md  
 3. **The design is approved before tasks are written.** Tasks are coding steps derived from the design, nothing more.
 4. **Tasks are checked off in the same commit as the code that satisfies them.** A checked box means the code exists and the tests pass. An unchecked box is the backlog.
 
-Use the slash commands in `.claude/commands/` to walk the loop: `/plan-new`, `/plan-review`, `/rfc-new`, `/adr-new`, `/spec-new`, `/spec-design`, `/spec-tasks`, `/spec-execute`, `/review` and `/verify`. Each stops at its gate and waits for approval.
+Use the slash commands in `.claude/commands/` to walk the loop: `/plan-new`, `/plan-review`, `/rfc-new`, `/adr-new`, `/spec-new`, `/spec-design`, `/spec-tasks`, `/spec-execute`, `/review` and `/verify`. The planning and spec commands (`/plan-new`, `/plan-review`, `/spec-new`, `/spec-design`, `/spec-tasks`) stop at their gate and wait for approval; the others run to completion and report.
 
 Templates live in [`_templates/`](_templates/).
 
