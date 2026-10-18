@@ -20,6 +20,8 @@ public sealed class Appointment
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime UpdatedAtUtc { get; private set; }
     public DateTime? CancelledAtUtc { get; private set; }
+    public DateTime? CompletedAtUtc { get; private set; }
+    public DateTime? NoShowAtUtc { get; private set; }
 
     // The id is a parameter because the handler generated it when it claimed the idempotency key
     // and has already used it as the reservation key in Availability.
@@ -66,5 +68,38 @@ public sealed class Appointment
         Status = AppointmentStatus.Cancelled;
         CancelledAtUtc = nowUtc;
         UpdatedAtUtc = nowUtc;
+    }
+
+    // Handlers check the state first, so reaching these with anything but a started Booked
+    // appointment is a bug. The handlers apply the same rules through a conditional update.
+    public void Complete(DateTime nowUtc)
+    {
+        EnsureCanBeMarked(nowUtc, AppointmentStatus.Completed);
+
+        Status = AppointmentStatus.Completed;
+        CompletedAtUtc = nowUtc;
+        UpdatedAtUtc = nowUtc;
+    }
+
+    public void MarkNoShow(DateTime nowUtc)
+    {
+        EnsureCanBeMarked(nowUtc, AppointmentStatus.NoShow);
+
+        Status = AppointmentStatus.NoShow;
+        NoShowAtUtc = nowUtc;
+        UpdatedAtUtc = nowUtc;
+    }
+
+    private void EnsureCanBeMarked(DateTime nowUtc, AppointmentStatus target)
+    {
+        if (Status != AppointmentStatus.Booked)
+        {
+            throw new InvalidOperationException($"Only a booked appointment can be marked {target}; this one is {Status}.");
+        }
+
+        if (nowUtc < StartUtc)
+        {
+            throw new InvalidOperationException("An appointment cannot be marked before it starts.");
+        }
     }
 }

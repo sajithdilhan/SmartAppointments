@@ -38,5 +38,12 @@ public interface IAppointmentRepository
         Guid customerId, AppointmentStatus? status, AppointmentTimeFilter? when, DateTime nowUtc,
         int page, int pageSize, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// One conditional update: moves a still-Booked appointment to <paramref name="to"/> (Cancelled,
+    /// Completed or NoShow), setting UpdatedAtUtc and the matching timestamp. Returns false when no
+    /// row changed (unknown id, or the status was no longer Booked), so the caller re-reads.
+    /// </summary>
+    Task<bool> TryTransitionAsync(Guid id, AppointmentStatus to, DateTime nowUtc, CancellationToken cancellationToken);
+
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

@@ -1,3 +1,4 @@
+using Booking.Domain.Entities;
 using SmartAppointments.BuildingBlocks.Models;
 
 namespace Booking.Application.Handlers;
@@ -16,6 +17,14 @@ internal static class AppointmentErrors
     public static Error KeyInProgress() => new(409, "A request with this Idempotency-Key is still being processed.");
 
     public static Error AlreadyStarted() => new(409, "The appointment has already started and can no longer be cancelled.");
+
+    public static Error NotCancellable(AppointmentStatus status) =>
+        new(409, $"The appointment is {status} and can no longer be cancelled.");
+
+    public static Error NotMarkable(AppointmentStatus status, AppointmentStatus target) =>
+        new(409, $"The appointment is {status} and cannot be marked {target}.");
+
+    public static Error NotStarted() => new(409, "The appointment has not started yet.");
 
     public static Error Unavailable() => new(503, "The availability service is unavailable. Try again later.");
 }

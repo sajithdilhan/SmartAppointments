@@ -125,7 +125,7 @@ public class CreateAppointmentCommandHandlerTests
     {
         var stored = new AppointmentResponse(
             Guid.CreateVersion7(), _command.CustomerId, _slot.Id, _slot.BranchId, _slot.ServiceTypeId,
-            _slot.StartUtc, _slot.EndUtc, AppointmentStatus.Booked, Now.UtcDateTime, Now.UtcDateTime, null);
+            _slot.StartUtc, _slot.EndUtc, AppointmentStatus.Booked, Now.UtcDateTime, Now.UtcDateTime, null, null, null);
         _idempotency.Setup(r => r.ClaimAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ClaimResult.Replay(201, JsonSerializer.Serialize(stored, Json)));
 

@@ -23,8 +23,9 @@ public class GetAppointmentHandlerTests
         _appointments.Setup(r => r.GetByIdNoTrackingAsync(_appointment.Id, It.IsAny<CancellationToken>())).ReturnsAsync(_appointment);
     }
 
-    private Task<SmartAppointments.BuildingBlocks.Models.Result<Booking.Application.Models.AppointmentResponse>> Send(Guid id, Guid caller, string role) =>
-        new GetAppointmentHandler(_appointments.Object).Handle(new GetAppointmentQuery(id, caller, role), CancellationToken.None);
+    private Task<SmartAppointments.BuildingBlocks.Models.Result<Booking.Application.Models.AppointmentResponse>> Send(
+        Guid id, Guid caller, string role, Guid? branch = null) =>
+        new GetAppointmentHandler(_appointments.Object).Handle(new GetAppointmentQuery(id, caller, role, branch), CancellationToken.None);
 
     [Fact]
     public async Task The_Owner_Gets_The_Appointment()
@@ -36,11 +37,42 @@ public class GetAppointmentHandlerTests
     }
 
     [Theory]
-    [InlineData(Constants.StaffRole)]
-    [InlineData(Constants.AdminRole)]
-    public async Task Staff_And_Admin_Get_Any_Appointment(string role)
+    [InlineData(null)]
+    [InlineData("other")]
+    public async Task Admin_Gets_Any_Appointment_Whatever_Its_Branch_Claim(string? claim)
     {
-        var result = await Send(_appointment.Id, Guid.CreateVersion7(), role);
+        Guid? branch = claim is null ? null : Guid.CreateVersion7();
+
+        var result = await Send(_appointment.Id, Guid.CreateVersion7(), Constants.AdminRole, branch);
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task Staff_Of_The_Appointments_Branch_Get_It()
+    {
+        var result = await Send(_appointment.Id, Guid.CreateVersion7(), Constants.StaffRole, _appointment.BranchId);
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Staff_Of_Another_Branch_Or_Without_A_Claim_Get_404(bool hasOtherBranch)
+    {
+        Guid? branch = hasOtherBranch ? Guid.CreateVersion7() : null;
+
+        var result = await Send(_appointment.Id, Guid.CreateVersion7(), Constants.StaffRole, branch);
+
+        Assert.Equal(404, result.Error!.Status);
+        Assert.Equal($"Appointment '{_appointment.Id}' was not found.", result.Error.Details);
+    }
+
+    [Fact]
+    public async Task The_Owner_Gets_It_Even_With_A_Foreign_Branch_Claim()
+    {
+        var result = await Send(_appointment.Id, _owner, Constants.CustomerRole, Guid.CreateVersion7());
 
         Assert.True(result.IsSuccess);
     }

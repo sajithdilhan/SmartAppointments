@@ -87,7 +87,7 @@ public class AppointmentsController(ISender sender) : ControllerBase
             return Unauthorised();
         }
 
-        var result = await sender.Send(new GetAppointmentQuery(id, callerId, role), cancellationToken);
+        var result = await sender.Send(new GetAppointmentQuery(id, callerId, role, CallerBranchId), cancellationToken);
 
         if (!result.IsSuccess)
         {
@@ -115,6 +115,40 @@ public class AppointmentsController(ISender sender) : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>Marks a started appointment as attended. Staff of its branch and admins only.</summary>
+    [HttpPost("{id:guid}/complete")]
+    [Authorize(Policy = Constants.AdminOrStaffPolicy)]
+    public Task<IActionResult> Complete(Guid id, CancellationToken cancellationToken) =>
+        Mark(id, AppointmentOutcome.Completed, cancellationToken);
+
+    /// <summary>Marks a started appointment as missed by the customer. Staff of its branch and admins only.</summary>
+    [HttpPost("{id:guid}/no-show")]
+    [Authorize(Policy = Constants.AdminOrStaffPolicy)]
+    public Task<IActionResult> NoShow(Guid id, CancellationToken cancellationToken) =>
+        Mark(id, AppointmentOutcome.NoShow, cancellationToken);
+
+    private async Task<IActionResult> Mark(Guid id, AppointmentOutcome outcome, CancellationToken cancellationToken)
+    {
+        if (!TryGetCaller(out var callerId, out var role))
+        {
+            return Unauthorised();
+        }
+
+        var result = await sender.Send(
+            new MarkAppointmentCommand(id, outcome, callerId, role, CallerBranchId), cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return this.ToActionResult(result.Error!);
+        }
+
+        return Ok(result.Value);
+    }
+
+    // A missing or malformed claim is null, which matches no branch.
+    private Guid? CallerBranchId =>
+        Guid.TryParse(User.FindFirst(Constants.BranchIdClaimType)?.Value, out var b) && b != Guid.Empty ? b : null;
 
     private string? Raw(string name, string? bound) =>
         bound ?? (Request.Query.ContainsKey(name) ? string.Empty : null);

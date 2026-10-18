@@ -9,6 +9,10 @@ public class MyAppointmentsParametersTests
     [InlineData("Booked", AppointmentStatus.Booked)]
     [InlineData("booked", AppointmentStatus.Booked)]
     [InlineData("CANCELLED", AppointmentStatus.Cancelled)]
+    [InlineData("Completed", AppointmentStatus.Completed)]
+    [InlineData("completed", AppointmentStatus.Completed)]
+    [InlineData("NoShow", AppointmentStatus.NoShow)]
+    [InlineData("NOSHOW", AppointmentStatus.NoShow)]
     [InlineData(null, null)]
     public void A_Valid_Or_Omitted_Status_Parses(string? raw, AppointmentStatus? expected)
     {
@@ -18,8 +22,7 @@ public class MyAppointmentsParametersTests
 
     [Theory]
     [InlineData("")]
-    [InlineData("Completed")]
-    [InlineData("NoShow")]
+    [InlineData("No-Show")]
     [InlineData("1")]
     [InlineData(" Booked")]
     [InlineData("Booked,Cancelled")]

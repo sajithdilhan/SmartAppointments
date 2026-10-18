@@ -49,26 +49,26 @@
 
 ## Chunk C — Booking statuses, transitions and scoped reads
 
-- [ ] 7. Domain and migration
+- [x] 7. Domain and migration
   - `AppointmentStatus.Completed`, `NoShow`; `CompletedAtUtc`, `NoShowAtUtc`; `Appointment.Complete(now)` and `MarkNoShow(now)` (`Booked` only, not before start)
   - EF config, migration `AddAppointmentOutcomes` (two columns, `IX_Appointments_BranchId_StartUtc`)
   - `AppointmentResponse` gains `CompletedAtUtc`, `NoShowAtUtc` (update positional callers and tests)
   - Tests: `AppointmentTests` additions
   - _Requirements: 7.1, 7.2, 8.1, 8.4_
 
-- [ ] 8. Conditional transitions and cancel
+- [x] 8. Conditional transitions and cancel
   - `IAppointmentRepository.TryTransitionAsync` (`ExecuteUpdateAsync` with `Status == Booked`, sets the status, `UpdatedAtUtc` and the matching timestamp)
   - `CancelAppointmentCommandHandler`: no-tracking read, `409` for Completed/NoShow, conditional update with re-read on a lost race, release unchanged
   - Tests: `CancelAppointmentHandlerTests` additions (Completed/NoShow `409`, lost race to a cancel → repeat path, lost race to a mark → `409`, existing cases unchanged)
   - _Requirements: 8.3, 8.5_
 
-- [ ] 9. Complete and no-show
+- [x] 9. Complete and no-show
   - `AppointmentOutcome`, `MarkAppointmentCommand`, `MarkAppointmentHandler` per the design
   - `AppointmentsController`: `CallerBranchId` helper; `POST {id:guid}/complete` and `/no-show` (`AdminOrStaffPolicy`, `200` with the appointment)
   - Tests: `MarkAppointmentHandlerTests` (every status × target, before start, repeat without update, stale update re-read, other branch and no claim `404`, admin), controller tests (routes, policies, claim parsing)
   - _Requirements: 7.1–7.7_
 
-- [ ] 10. Branch-scoped read and `/my` statuses
+- [x] 10. Branch-scoped read and `/my` statuses
   - `GetAppointmentQuery` gains `CallerBranchId`; handler rule `owner || Admin || Staff of the branch`
   - `MyAppointmentsParameters.TryParseStatus` accepts `Completed`, `NoShow`; validator message updated
   - Tests: `GetAppointmentHandlerTests` (same branch, other branch, no claim, admin, owner), `MyAppointmentsParametersTests` and validator tests updated

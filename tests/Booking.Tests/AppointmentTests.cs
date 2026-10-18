@@ -82,4 +82,69 @@ public class AppointmentTests
 
         Assert.Throws<InvalidOperationException>(() => appointment.Cancel(Now.AddMinutes(1)));
     }
+
+    [Fact]
+    public void Complete_Marks_Completed_And_Sets_Only_Its_Timestamp()
+    {
+        var appointment = NewAppointment();
+        var at = Start.AddMinutes(5);
+
+        appointment.Complete(at);
+
+        Assert.Equal(AppointmentStatus.Completed, appointment.Status);
+        Assert.Equal(at, appointment.CompletedAtUtc);
+        Assert.Equal(at, appointment.UpdatedAtUtc);
+        Assert.Null(appointment.NoShowAtUtc);
+        Assert.Null(appointment.CancelledAtUtc);
+    }
+
+    [Fact]
+    public void MarkNoShow_Marks_NoShow_And_Sets_Only_Its_Timestamp()
+    {
+        var appointment = NewAppointment();
+        var at = Start;
+
+        appointment.MarkNoShow(at);
+
+        Assert.Equal(AppointmentStatus.NoShow, appointment.Status);
+        Assert.Equal(at, appointment.NoShowAtUtc);
+        Assert.Equal(at, appointment.UpdatedAtUtc);
+        Assert.Null(appointment.CompletedAtUtc);
+    }
+
+    [Fact]
+    public void Complete_And_MarkNoShow_Throw_Before_The_Start()
+    {
+        var appointment = NewAppointment();
+
+        Assert.Throws<InvalidOperationException>(() => appointment.Complete(Start.AddTicks(-1)));
+        Assert.Throws<InvalidOperationException>(() => appointment.MarkNoShow(Start.AddTicks(-1)));
+        Assert.Equal(AppointmentStatus.Booked, appointment.Status);
+    }
+
+    [Fact]
+    public void Complete_And_MarkNoShow_Throw_When_Not_Booked()
+    {
+        var cancelled = NewAppointment();
+        cancelled.Cancel(Now);
+        var completed = NewAppointment();
+        completed.Complete(Start);
+
+        Assert.Throws<InvalidOperationException>(() => cancelled.Complete(Start));
+        Assert.Throws<InvalidOperationException>(() => cancelled.MarkNoShow(Start));
+        Assert.Throws<InvalidOperationException>(() => completed.MarkNoShow(Start));
+        Assert.Throws<InvalidOperationException>(() => completed.Complete(Start));
+    }
+
+    [Fact]
+    public void Cancel_Throws_For_Completed_And_NoShow()
+    {
+        var completed = NewAppointment();
+        completed.Complete(Start);
+        var noShow = NewAppointment();
+        noShow.MarkNoShow(Start);
+
+        Assert.Throws<InvalidOperationException>(() => completed.Cancel(Start));
+        Assert.Throws<InvalidOperationException>(() => noShow.Cancel(Start));
+    }
 }

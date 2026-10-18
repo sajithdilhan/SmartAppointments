@@ -16,7 +16,7 @@ public class CancelAppointmentCommandHandler(
 {
     public async Task<Result<bool>> Handle(CancelAppointmentCommand request, CancellationToken cancellationToken)
     {
-        var appointment = await appointments.GetByIdAsync(request.Id, cancellationToken);
+        var appointment = await appointments.GetByIdNoTrackingAsync(request.Id, cancellationToken);
 
         // Staff can view an appointment but not cancel someone else's: they get the same 404.
         var allowed = appointment is not null &&
@@ -26,9 +26,14 @@ public class CancelAppointmentCommandHandler(
             return Result<bool>.Failure(AppointmentErrors.NotFound(request.Id));
         }
 
+        if (appointment!.Status is AppointmentStatus.Completed or AppointmentStatus.NoShow)
+        {
+            return Result<bool>.Failure(AppointmentErrors.NotCancellable(appointment.Status));
+        }
+
         // A repeat cancel skips the checks and goes straight to the release, which is what lets a
         // customer finish a cancel whose release failed, even after the start time has passed.
-        if (appointment!.Status != AppointmentStatus.Cancelled)
+        if (appointment.Status == AppointmentStatus.Booked)
         {
             var nowUtc = timeProvider.GetUtcNow().UtcDateTime;
             if (appointment.StartUtc <= nowUtc)
@@ -36,8 +41,22 @@ public class CancelAppointmentCommandHandler(
                 return Result<bool>.Failure(AppointmentErrors.AlreadyStarted());
             }
 
-            appointment.Cancel(nowUtc);
-            await appointments.SaveChangesAsync(cancellationToken);
+            var changed = await appointments.TryTransitionAsync(
+                appointment.Id, AppointmentStatus.Cancelled, nowUtc, cancellationToken);
+            if (!changed)
+            {
+                // Another request changed it first. A concurrent cancel is a repeat cancel; a mark wins.
+                var current = await appointments.GetByIdNoTrackingAsync(appointment.Id, cancellationToken);
+                if (current is null)
+                {
+                    return Result<bool>.Failure(AppointmentErrors.NotFound(request.Id));
+                }
+
+                if (current.Status != AppointmentStatus.Cancelled)
+                {
+                    return Result<bool>.Failure(AppointmentErrors.NotCancellable(current.Status));
+                }
+            }
         }
 
         var release = await availability.ReleaseAsync(appointment.SlotId, appointment.Id, cancellationToken);

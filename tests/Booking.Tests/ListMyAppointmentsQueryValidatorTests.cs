@@ -24,8 +24,16 @@ public class ListMyAppointmentsQueryValidatorTests
     }
 
     [Theory]
-    [InlineData("status", "Completed", "The status must be Booked or Cancelled.")]
-    [InlineData("status", "", "The status must be Booked or Cancelled.")]
+    [InlineData("Completed")]
+    [InlineData("NoShow")]
+    public void The_New_Statuses_Pass(string status)
+    {
+        Assert.True(_validator.Validate(Omitted with { Status = status }).IsValid);
+    }
+
+    [Theory]
+    [InlineData("status", "Done", "The status must be Booked, Cancelled, Completed or NoShow.")]
+    [InlineData("status", "", "The status must be Booked, Cancelled, Completed or NoShow.")]
     [InlineData("when", "now", "The when must be upcoming or past.")]
     [InlineData("when", "", "The when must be upcoming or past.")]
     [InlineData("page", "0", "The page must be a whole number of at least 1.")]

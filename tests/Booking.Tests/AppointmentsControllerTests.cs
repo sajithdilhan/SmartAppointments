@@ -19,17 +19,24 @@ public class AppointmentsControllerTests
 {
     private static readonly Guid UserId = Guid.CreateVersion7();
     private static readonly Guid SlotId = Guid.CreateVersion7();
+    private static readonly Guid BranchId = Guid.CreateVersion7();
     private static readonly DateTime Start = new(2030, 1, 7, 3, 30, 0, DateTimeKind.Utc);
 
     private readonly Mock<ISender> _sender = new();
 
     private static AppointmentResponse Response() => new(
         Guid.CreateVersion7(), UserId, SlotId, Guid.CreateVersion7(), Guid.CreateVersion7(),
-        Start, Start.AddMinutes(30), AppointmentStatus.Booked, Start, Start, null);
+        Start, Start.AddMinutes(30), AppointmentStatus.Booked, Start, Start, null, null, null);
 
-    private AppointmentsController Controller(string? sub = null, string role = Constants.CustomerRole, bool withSub = true)
+    private AppointmentsController Controller(
+        string? sub = null, string role = Constants.CustomerRole, bool withSub = true, string? branchClaim = null)
     {
         var claims = new List<Claim> { new(Constants.RoleClaimType, role) };
+        if (branchClaim is not null)
+        {
+            claims.Add(new Claim(Constants.BranchIdClaimType, branchClaim));
+        }
+
         if (withSub)
         {
             claims.Add(new Claim(Constants.UserIdClaimType, sub ?? UserId.ToString()));
@@ -130,12 +137,95 @@ public class AppointmentsControllerTests
     public async Task GetById_Successful_Passes_Caller_And_Role_And_Returns_Ok()
     {
         var response = Response();
-        _sender.Setup(s => s.Send(new GetAppointmentQuery(response.Id, UserId, Constants.StaffRole), It.IsAny<CancellationToken>()))
+        _sender.Setup(s => s.Send(new GetAppointmentQuery(response.Id, UserId, Constants.StaffRole, BranchId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<AppointmentResponse>.Success(response));
 
-        var result = await Controller(role: Constants.StaffRole).GetById(response.Id, CancellationToken.None);
+        var result = await Controller(role: Constants.StaffRole, branchClaim: BranchId.ToString()).GetById(response.Id, CancellationToken.None);
 
         Assert.Same(response, Assert.IsType<OkObjectResult>(result).Value);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("not-a-guid")]
+    [InlineData("00000000-0000-0000-0000-000000000000")]
+    public async Task A_Missing_Malformed_Or_Empty_Branch_Claim_Reaches_The_Query_As_Null(string? claim)
+    {
+        var id = Guid.CreateVersion7();
+        _sender.Setup(s => s.Send(It.IsAny<GetAppointmentQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<AppointmentResponse>.Failure(new Error(404, "nope")));
+
+        await Controller(role: Constants.StaffRole, branchClaim: claim).GetById(id, CancellationToken.None);
+
+        _sender.Verify(s => s.Send(new GetAppointmentQuery(id, UserId, Constants.StaffRole, null), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(AppointmentOutcome.Completed)]
+    [InlineData(AppointmentOutcome.NoShow)]
+    public async Task Mark_Successful_Returns_Ok_With_The_Appointment_And_Passes_Caller_And_Branch(AppointmentOutcome outcome)
+    {
+        var response = Response();
+        _sender.Setup(s => s.Send(
+                new MarkAppointmentCommand(response.Id, outcome, UserId, Constants.StaffRole, BranchId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<AppointmentResponse>.Success(response));
+        var controller = Controller(role: Constants.StaffRole, branchClaim: BranchId.ToString());
+
+        var result = outcome == AppointmentOutcome.Completed
+            ? await controller.Complete(response.Id, CancellationToken.None)
+            : await controller.NoShow(response.Id, CancellationToken.None);
+
+        Assert.Same(response, Assert.IsType<OkObjectResult>(result).Value);
+    }
+
+    [Fact]
+    public async Task Mark_Without_A_Branch_Claim_Sends_A_Null_Branch()
+    {
+        var id = Guid.CreateVersion7();
+        _sender.Setup(s => s.Send(It.IsAny<MarkAppointmentCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<AppointmentResponse>.Failure(new Error(404, "nope")));
+
+        await Controller(role: Constants.AdminRole).Complete(id, CancellationToken.None);
+
+        _sender.Verify(s => s.Send(
+            new MarkAppointmentCommand(id, AppointmentOutcome.Completed, UserId, Constants.AdminRole, null),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(404, 404)]
+    [InlineData(409, 409)]
+    public async Task Mark_Failure_Maps_To_The_Handler_Status(int status, int expected)
+    {
+        _sender.Setup(s => s.Send(It.IsAny<MarkAppointmentCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<AppointmentResponse>.Failure(new Error(status, "failure")));
+        var controller = Controller(role: Constants.StaffRole);
+
+        var complete = await controller.Complete(Guid.CreateVersion7(), CancellationToken.None);
+        var noShow = await controller.NoShow(Guid.CreateVersion7(), CancellationToken.None);
+
+        Assert.Equal(expected, Assert.IsAssignableFrom<ObjectResult>(complete).StatusCode);
+        Assert.Equal(expected, Assert.IsAssignableFrom<ObjectResult>(noShow).StatusCode);
+    }
+
+    [Fact]
+    public async Task Mark_With_A_Missing_Sub_Is_401()
+    {
+        var controller = Controller(withSub: false, role: Constants.StaffRole);
+
+        Assert.IsType<UnauthorizedObjectResult>(await controller.Complete(Guid.CreateVersion7(), CancellationToken.None));
+        Assert.IsType<UnauthorizedObjectResult>(await controller.NoShow(Guid.CreateVersion7(), CancellationToken.None));
+        _sender.VerifyNoOtherCalls();
+    }
+
+    [Theory]
+    [InlineData(nameof(AppointmentsController.Complete), "{id:guid}/complete")]
+    [InlineData(nameof(AppointmentsController.NoShow), "{id:guid}/no-show")]
+    public void Mark_Actions_Are_Posts_On_Their_Routes(string action, string template)
+    {
+        var attribute = typeof(AppointmentsController).GetMethod(action)!.GetCustomAttribute<HttpPostAttribute>();
+
+        Assert.Equal(template, attribute!.Template);
     }
 
     [Fact]
@@ -250,6 +340,8 @@ public class AppointmentsControllerTests
     [InlineData(nameof(AppointmentsController.GetMine), Constants.CustomerPolicy)]
     [InlineData(nameof(AppointmentsController.GetById), Constants.AllowedOriginsPolicy)]
     [InlineData(nameof(AppointmentsController.Cancel), Constants.AllowedOriginsPolicy)]
+    [InlineData(nameof(AppointmentsController.Complete), Constants.AdminOrStaffPolicy)]
+    [InlineData(nameof(AppointmentsController.NoShow), Constants.AdminOrStaffPolicy)]
     public void Each_Action_Carries_Its_Policy(string action, string policy)
     {
         var attribute = typeof(AppointmentsController).GetMethod(action)!.GetCustomAttribute<AuthorizeAttribute>();

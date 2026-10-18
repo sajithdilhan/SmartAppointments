@@ -10,7 +10,7 @@ public class ListMyAppointmentsQueryValidator : AbstractValidator<ListMyAppointm
     {
         RuleFor(x => x.Status)
             .Must(s => MyAppointmentsParameters.TryParseStatus(s, out _))
-            .WithMessage("The status must be Booked or Cancelled.");
+            .WithMessage("The status must be Booked, Cancelled, Completed or NoShow.");
         RuleFor(x => x.When)
             .Must(w => MyAppointmentsParameters.TryParseWhen(w, out _))
             .WithMessage("The when must be upcoming or past.");

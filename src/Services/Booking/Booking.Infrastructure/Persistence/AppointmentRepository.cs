@@ -97,6 +97,24 @@ public class AppointmentRepository(ApplicationDbContext context) : IAppointmentR
         return new AppointmentPage(items, total);
     }
 
+    public async Task<bool> TryTransitionAsync(
+        Guid id, AppointmentStatus to, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        // The Status == Booked condition makes the database decide a race between a cancel, a
+        // complete and a no-show: exactly one of them changes the row.
+        var rows = await context.Appointments
+            .Where(a => a.Id == id && a.Status == AppointmentStatus.Booked)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.Status, to)
+                .SetProperty(a => a.UpdatedAtUtc, nowUtc)
+                .SetProperty(a => a.CancelledAtUtc, a => to == AppointmentStatus.Cancelled ? nowUtc : a.CancelledAtUtc)
+                .SetProperty(a => a.CompletedAtUtc, a => to == AppointmentStatus.Completed ? nowUtc : a.CompletedAtUtc)
+                .SetProperty(a => a.NoShowAtUtc, a => to == AppointmentStatus.NoShow ? nowUtc : a.NoShowAtUtc),
+                cancellationToken);
+
+        return rows == 1;
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         return context.SaveChangesAsync(cancellationToken);

@@ -4,4 +4,5 @@ using SmartAppointments.BuildingBlocks.Models;
 
 namespace Booking.Application.Queries;
 
-public sealed record GetAppointmentQuery(Guid Id, Guid CallerId, string CallerRole) : IRequest<Result<AppointmentResponse>>;
+/// <param name="CallerBranchId">The staff member's <c>branch_id</c> claim, or null when absent or malformed.</param>
+public sealed record GetAppointmentQuery(Guid Id, Guid CallerId, string CallerRole, Guid? CallerBranchId) : IRequest<Result<AppointmentResponse>>;

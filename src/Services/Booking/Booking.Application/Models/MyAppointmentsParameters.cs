@@ -13,8 +13,7 @@ internal static class MyAppointmentsParameters
     public const int DefaultPageSize = 20;
     public const int MaxPageSize = 100;
 
-    // Matched by name on purpose, not with Enum.TryParse: that would also accept "0" or "1,0", and
-    // Completed and NoShow must stay invalid until their feature adds them here.
+    // Matched by name on purpose, not with Enum.TryParse: that would also accept "0" or "1,0".
     public static bool TryParseStatus(string? raw, out AppointmentStatus? status)
     {
         status = null;
@@ -32,6 +31,18 @@ internal static class MyAppointmentsParameters
         if (string.Equals(raw, nameof(AppointmentStatus.Cancelled), StringComparison.OrdinalIgnoreCase))
         {
             status = AppointmentStatus.Cancelled;
+            return true;
+        }
+
+        if (string.Equals(raw, nameof(AppointmentStatus.Completed), StringComparison.OrdinalIgnoreCase))
+        {
+            status = AppointmentStatus.Completed;
+            return true;
+        }
+
+        if (string.Equals(raw, nameof(AppointmentStatus.NoShow), StringComparison.OrdinalIgnoreCase))
+        {
+            status = AppointmentStatus.NoShow;
             return true;
         }
 
