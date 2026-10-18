@@ -97,6 +97,51 @@ public class AppointmentRepository(ApplicationDbContext context) : IAppointmentR
         return new AppointmentPage(items, total);
     }
 
+    public async Task<AppointmentPage> ListForBranchAsync(
+        Guid branchId, DateTime fromUtc, DateTime toUtc, AppointmentStatus? status,
+        int page, int pageSize, CancellationToken cancellationToken)
+    {
+        // Served by IX_Appointments_BranchId_StartUtc; the Id tie-break is finished by an incremental sort.
+        var query = context.Appointments.AsNoTracking()
+            .Where(a => a.BranchId == branchId && a.StartUtc >= fromUtc && a.StartUtc < toUtc);
+        if (status is { } s)
+        {
+            query = query.Where(a => a.Status == s);
+        }
+
+        var total = await query.CountAsync(cancellationToken);
+
+        // A long, because page can be up to int.MaxValue. Past the end there is nothing to read, and
+        // once this passes skip < total, so the int cast below is safe.
+        var skip = (long)(page - 1) * pageSize;
+        if (skip >= total)
+        {
+            return new AppointmentPage([], total);
+        }
+
+        var items = await query.OrderBy(a => a.StartUtc).ThenBy(a => a.Id)
+            .Skip((int)skip).Take(pageSize).ToListAsync(cancellationToken);
+        return new AppointmentPage(items, total);
+    }
+
+    public async Task<bool> TryTransitionAsync(
+        Guid id, AppointmentStatus to, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        // The Status == Booked condition makes the database decide a race between a cancel, a
+        // complete and a no-show: exactly one of them changes the row.
+        var rows = await context.Appointments
+            .Where(a => a.Id == id && a.Status == AppointmentStatus.Booked)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.Status, to)
+                .SetProperty(a => a.UpdatedAtUtc, nowUtc)
+                .SetProperty(a => a.CancelledAtUtc, a => to == AppointmentStatus.Cancelled ? nowUtc : a.CancelledAtUtc)
+                .SetProperty(a => a.CompletedAtUtc, a => to == AppointmentStatus.Completed ? nowUtc : a.CompletedAtUtc)
+                .SetProperty(a => a.NoShowAtUtc, a => to == AppointmentStatus.NoShow ? nowUtc : a.NoShowAtUtc),
+                cancellationToken);
+
+        return rows == 1;
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         return context.SaveChangesAsync(cancellationToken);

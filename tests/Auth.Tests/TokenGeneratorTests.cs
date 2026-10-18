@@ -106,6 +106,39 @@ public class TokenGeneratorTests
     }
 
     [Fact]
+    public void GenerateAccessToken_Adds_The_Branch_Claim_For_Staff_With_A_Branch()
+    {
+        var branchId = Guid.NewGuid();
+        var user = User.RegisterStaff("Sam", "Staff", Email.Create("staff@example.com"), "+15551234567", "hash", branchId);
+
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(CreateSubject().GenerateAccessToken(user).Value);
+
+        Assert.Equal(branchId.ToString(), token.Claims.Single(c => c.Type == Constants.BranchIdClaimType).Value);
+        Assert.Equal("branch_id", Constants.BranchIdClaimType);
+        Assert.Equal(nameof(UserRole.Staff), token.Claims.Single(c => c.Type == Constants.RoleClaimType).Value);
+        Assert.Equal(user.Id.ToString(), token.Claims.Single(c => c.Type == Constants.UserIdClaimType).Value);
+        Assert.Equal(user.Email.Value, token.Claims.Single(c => c.Type == Constants.EmailClaimType).Value);
+    }
+
+    [Theory]
+    [InlineData(UserRole.Customer)]
+    [InlineData(UserRole.Admin)]
+    public void GenerateAccessToken_Has_No_Branch_Claim_For_Customers_And_Admins(UserRole role)
+    {
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(CreateSubject().GenerateAccessToken(CreateUser(role)).Value);
+
+        Assert.DoesNotContain(token.Claims, c => c.Type == Constants.BranchIdClaimType);
+    }
+
+    [Fact]
+    public void GenerateAccessToken_Keeps_The_Lifetime_For_Staff()
+    {
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(CreateSubject(accessTokenExpirationMinutes: 60).GenerateAccessToken(CreateUser(UserRole.Staff)).Value);
+
+        Assert.Equal(Now.AddMinutes(60).UtcDateTime, token.ValidTo);
+    }
+
+    [Fact]
     public void GenerateAccessToken_Sets_Issuer_And_Audience()
     {
         var subject = CreateSubject();
@@ -131,7 +164,7 @@ public class TokenGeneratorTests
     private static User CreateUser(UserRole role) => role switch
     {
         UserRole.Admin => User.RegisterAdmin("Ada", "Admin", Email.Create("admin@example.com"), "+15551234567", "hash"),
-        UserRole.Staff => User.RegisterStaff("Sam", "Staff", Email.Create("staff@example.com"), "+15551234567", "hash"),
+        UserRole.Staff => User.RegisterStaff("Sam", "Staff", Email.Create("staff@example.com"), "+15551234567", "hash", Guid.NewGuid()),
         _ => User.RegisterCustomer("Cam", "Customer", Email.Create("customer@example.com"), "+15551234567", "hash")
     };
 }

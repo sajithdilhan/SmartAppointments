@@ -160,6 +160,13 @@ X-API-Key: {{InternalApiKey}}
 
 ###
 
+# A branch's id, active flag and time zone (null until a schedule is set); inactive branches are
+# included. 404 for an unknown id. Used by Auth (staff branch checks) and Booking (day boundaries).
+GET {{Availability.Api_HostAddress}}/internal/branches/{{BranchId}}
+X-API-Key: {{InternalApiKey}}
+
+###
+
 # Idempotent per appointment id: repeating it succeeds and takes no second place. 409 when the
 # slot is full, has started, or its branch or service type is inactive.
 POST {{Availability.Api_HostAddress}}/internal/slots/{{SlotId}}/reserve

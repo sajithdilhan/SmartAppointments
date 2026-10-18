@@ -142,7 +142,7 @@ public class ListMyAppointmentsHandlerTests
         Assert.False(result.IsSuccess);
         Assert.Equal(400, result.Error!.Status);
         Assert.StartsWith("Invalid request data. Errors: ", result.Error.Details);
-        Assert.Contains("The status must be Booked or Cancelled.", result.Error.Details);
+        Assert.Contains("The status must be Booked, Cancelled, Completed or NoShow.", result.Error.Details);
         Assert.Contains("The when must be upcoming or past.", result.Error.Details);
         Assert.Contains("The page must be a whole number of at least 1.", result.Error.Details);
         Assert.Contains("The pageSize must be a whole number from 1 to 100.", result.Error.Details);

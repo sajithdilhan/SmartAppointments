@@ -23,6 +23,9 @@ public static class DependencyInjection
         }
 
         services.AddAvailabilityClient(configuration);
+        services.AddAuthClient(configuration);
+        services.AddMemoryCache();
+        services.AddScoped<IBranchTimeZoneProvider, CachedBranchTimeZoneProvider>();
 
         services.AddScoped<IAppointmentRepository, AppointmentRepository>();
         services.AddScoped<IIdempotencyRepository, IdempotencyRepository>();

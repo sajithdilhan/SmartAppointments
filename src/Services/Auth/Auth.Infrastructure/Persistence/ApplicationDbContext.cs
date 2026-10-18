@@ -46,6 +46,7 @@ public class ApplicationDbContext : DbContext
 
             entity.HasIndex(e => e.TokenHash).IsUnique();
             entity.HasIndex(e => e.FamilyId);
+            entity.HasIndex(e => new { e.UserId, e.RevokedAtUtc });
 
             // ReplacedById is bookkeeping, not an integrity rule: no foreign key, so a later purge
             // of old rows cannot trip over it.

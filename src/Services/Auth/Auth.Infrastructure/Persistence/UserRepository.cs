@@ -28,6 +28,16 @@ public class UserRepository(ApplicationDbContext context) : IUserRepository
         return await QueryByEmail(context.Users, email, cancellationToken);
     }
 
+    public async Task<User?> GetForUpdateByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return await context.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<User>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        return await context.Users.AsNoTracking().Where(u => ids.Contains(u.Id)).ToListAsync(cancellationToken);
+    }
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         try
@@ -40,6 +50,22 @@ public class UserRepository(ApplicationDbContext context) : IUserRepository
             // has no EF Core reference and should not learn one to handle a duplicate address.
             throw new DuplicateEmailException("Email is already registered.", ex);
         }
+    }
+
+    public async Task<int> SaveBranchMoveAsync(User user, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        // Same transaction pattern as RefreshTokenRepository.TryRotateAsync: disposing uncommitted rolls
+        // back, so a failed revoke leaves the branch unchanged and the admin's retry is not a no-op. No
+        // retry execution strategy is configured; if one is added this must move inside it.
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+        var revoked = await context.RefreshTokens
+            .Where(t => t.UserId == user.Id && t.RevokedAtUtc == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAtUtc, nowUtc), cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+        return revoked;
     }
 
     // 23505 is the PostgreSQL unique_violation SQLSTATE. The context also holds RefreshTokens, whose

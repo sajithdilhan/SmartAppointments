@@ -80,6 +80,21 @@ public class RefreshTokenCommandHandlerTests
     }
 
     [Fact]
+    public async Task A_Moved_Staff_Members_Token_Is_Generated_From_The_Re_Read_User_With_The_New_Branch()
+    {
+        var oldBranch = Guid.NewGuid();
+        var newBranch = Guid.NewGuid();
+        var user = User.RegisterStaff("Sam", "Staff", Email.Create("staff@example.com"), "+15551234567", "hash", oldBranch);
+        var stored = StartFamily(user, Now.AddDays(-1));
+        user.AssignBranch(newBranch);
+        Arrange(stored, user);
+
+        await CreateSubject().Handle(new RefreshTokenCommand(Presented), CancellationToken.None);
+
+        _tokenGenerator.Verify(t => t.GenerateAccessToken(It.Is<User>(u => u.BranchId == newBranch)), Times.Once);
+    }
+
+    [Fact]
     public async Task A_Refresh_Does_Not_Record_A_Login()
     {
         var user = CreateUser(UserRole.Customer);
@@ -182,6 +197,25 @@ public class RefreshTokenCommandHandlerTests
         AssertUnauthorized(result);
         _refreshTokens.Verify(r => r.RevokeFamilyAsync(stored.FamilyId, Now, It.IsAny<CancellationToken>()), Times.Once);
         _refreshTokens.Verify(r => r.TryRotateAsync(It.IsAny<Guid>(), It.IsAny<RefreshToken>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        _tokenGenerator.Verify(t => t.GenerateAccessToken(It.IsAny<User>()), Times.Never);
+        _tokenGenerator.Verify(t => t.GenerateRefreshToken(), Times.Never);
+    }
+
+    [Fact]
+    public async Task A_Token_Revoked_By_A_Branch_Move_Is_401_And_Issues_Nothing()
+    {
+        // A branch move revokes the staff member's tokens in place: RevokedAtUtc set, ReplacedById null.
+        var user = CreateUser(UserRole.Staff);
+        var stored = StartFamily(user, Now.AddDays(-1));
+        Revoke(stored);
+        Assert.Null(stored.ReplacedById);
+        Arrange(stored, user);
+
+        var result = await CreateSubject().Handle(new RefreshTokenCommand(Presented), CancellationToken.None);
+
+        AssertUnauthorized(result);
+        _refreshTokens.Verify(r => r.TryRotateAsync(It.IsAny<Guid>(), It.IsAny<RefreshToken>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        _refreshTokens.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Never);
         _tokenGenerator.Verify(t => t.GenerateAccessToken(It.IsAny<User>()), Times.Never);
         _tokenGenerator.Verify(t => t.GenerateRefreshToken(), Times.Never);
     }
@@ -332,7 +366,7 @@ public class RefreshTokenCommandHandlerTests
     private static User CreateUser(UserRole role) => role switch
     {
         UserRole.Admin => User.RegisterAdmin("Ada", "Admin", Email.Create("admin@example.com"), "+15551234567", "hash"),
-        UserRole.Staff => User.RegisterStaff("Sam", "Staff", Email.Create("staff@example.com"), "+15551234567", "hash"),
+        UserRole.Staff => User.RegisterStaff("Sam", "Staff", Email.Create("staff@example.com"), "+15551234567", "hash", Guid.NewGuid()),
         _ => User.RegisterCustomer("Cam", "Customer", Email.Create("customer@example.com"), "+15551234567", "hash")
     };
 

@@ -22,3 +22,9 @@ Start from [`_template.md`](_template.md).
 | Number | Title | Status | Date | Related |
 |---|---|---|---|---|
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted | 2026-10-17 | [WORKFLOW](../WORKFLOW.md) |
+| [0002](0002-staff-branch-jwt-claim.md) | Carry a staff member's branch as a JWT claim | Accepted | 2026-10-18 | [RFC-0001](../rfc/0001-staff-branch-assignment.md) |
+| [0003](0003-auth-validates-branch-via-availability.md) | Auth validates staff branch assignments through Availability | Accepted | 2026-10-18 | [RFC-0001](../rfc/0001-staff-branch-assignment.md) |
+| [0004](0004-branch-local-day-for-staff-queries.md) | Staff day queries use the branch's local day | Accepted | 2026-10-18 | [RFC-0001](../rfc/0001-staff-branch-assignment.md) |
+| [0005](0005-booking-reads-customers-from-auth.md) | Booking reads customer display data from Auth through a batch lookup | Accepted | 2026-10-18 | [RFC-0001](../rfc/0001-staff-branch-assignment.md) |
+| [0006](0006-conditional-appointment-transitions.md) | Appointment state transitions use conditional updates | Accepted | 2026-10-18 | [RFC-0001](../rfc/0001-staff-branch-assignment.md) |
+| [0007](0007-revoke-sessions-on-staff-reassignment.md) | Revoke all of a staff member's sessions when their branch changes | Accepted | 2026-10-18 | [RFC-0001](../rfc/0001-staff-branch-assignment.md) |

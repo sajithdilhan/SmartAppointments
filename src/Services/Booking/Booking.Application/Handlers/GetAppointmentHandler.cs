@@ -16,7 +16,8 @@ public class GetAppointmentHandler(IAppointmentRepository appointments)
 
         var allowed = appointment is not null &&
             (appointment.CustomerId == request.CallerId ||
-             request.CallerRole is Constants.StaffRole or Constants.AdminRole);
+             request.CallerRole == Constants.AdminRole ||
+             (request.CallerRole == Constants.StaffRole && request.CallerBranchId == appointment.BranchId));
 
         return allowed
             ? Result<AppointmentResponse>.Success(AppointmentResponse.From(appointment!))

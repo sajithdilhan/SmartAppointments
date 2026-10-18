@@ -13,9 +13,11 @@ public sealed record AppointmentResponse(
     AppointmentStatus Status,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
-    DateTime? CancelledAtUtc)
+    DateTime? CancelledAtUtc,
+    DateTime? CompletedAtUtc,
+    DateTime? NoShowAtUtc)
 {
     public static AppointmentResponse From(Appointment a) => new(
         a.Id, a.CustomerId, a.SlotId, a.BranchId, a.ServiceTypeId, a.StartUtc, a.EndUtc,
-        a.Status, a.CreatedAtUtc, a.UpdatedAtUtc, a.CancelledAtUtc);
+        a.Status, a.CreatedAtUtc, a.UpdatedAtUtc, a.CancelledAtUtc, a.CompletedAtUtc, a.NoShowAtUtc);
 }

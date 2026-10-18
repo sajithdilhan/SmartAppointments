@@ -63,6 +63,43 @@ public sealed class AvailabilityClient(HttpClient httpClient, ILogger<Availabili
     public Task<Result<bool>> ReleaseAsync(Guid slotId, Guid appointmentId, CancellationToken cancellationToken) =>
         PostAsync($"internal/slots/{slotId}/release", appointmentId, cancellationToken);
 
+    public async Task<Result<BranchInfo?>> GetBranchAsync(Guid branchId, CancellationToken cancellationToken)
+    {
+        var response = await SendAsync(
+            () => httpClient.GetAsync($"internal/branches/{branchId}", cancellationToken), cancellationToken);
+        if (response is null)
+        {
+            return Result<BranchInfo?>.Failure(Unavailable);
+        }
+
+        using (response)
+        {
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.OK:
+                    try
+                    {
+                        var branch = await response.Content.ReadFromJsonAsync<BranchInfo>(cancellationToken);
+                        if (branch is not null)
+                        {
+                            return Result<BranchInfo?>.Success(branch);
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        logger.LogError(ex, "Availability returned an unreadable branch body");
+                    }
+
+                    return Result<BranchInfo?>.Failure(Unavailable);
+                case HttpStatusCode.NotFound:
+                    // An unknown branch is a value, not an outage.
+                    return Result<BranchInfo?>.Success(null);
+                default:
+                    return Result<BranchInfo?>.Failure(await MapFailureAsync(response, cancellationToken));
+            }
+        }
+    }
+
     private async Task<Result<bool>> PostAsync(string path, Guid appointmentId, CancellationToken cancellationToken)
     {
         var response = await SendAsync(

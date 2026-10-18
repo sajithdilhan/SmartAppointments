@@ -1,4 +1,5 @@
 using Auth.Application.Commands;
+using Auth.Application.Queries;
 using Auth.Application.Validations;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +18,9 @@ public static class DependencyInjection
         services.AddScoped<IValidator<LoginUserCommand>, LoginUserRequestValidator>();
         services.AddScoped<IValidator<RefreshTokenCommand>, RefreshTokenCommandValidator>();
         services.AddScoped<IValidator<LogoutCommand>, LogoutCommandValidator>();
+        services.AddScoped<IValidator<CreateStaffCommand>, CreateStaffCommandValidator>();
+        services.AddScoped<IValidator<AssignStaffBranchCommand>, AssignStaffBranchCommandValidator>();
+        services.AddScoped<IValidator<LookupUsersQuery>, LookupUsersQueryValidator>();
         return services;
     }
 }

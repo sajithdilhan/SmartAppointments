@@ -20,6 +20,8 @@ public sealed class Appointment
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime UpdatedAtUtc { get; private set; }
     public DateTime? CancelledAtUtc { get; private set; }
+    public DateTime? CompletedAtUtc { get; private set; }
+    public DateTime? NoShowAtUtc { get; private set; }
 
     // The id is a parameter because the handler generated it when it claimed the idempotency key
     // and has already used it as the reservation key in Availability.
@@ -67,4 +69,35 @@ public sealed class Appointment
         CancelledAtUtc = nowUtc;
         UpdatedAtUtc = nowUtc;
     }
+
+    // The one description of the marking rules: only a Booked appointment, and not before it starts.
+    // Handlers apply the change itself through a conditional update (TryTransitionAsync), so this
+    // only answers whether it is allowed and, if not, why.
+    public MarkCheck CheckMark(AppointmentStatus target, DateTime nowUtc)
+    {
+        if (target is not (AppointmentStatus.Completed or AppointmentStatus.NoShow))
+        {
+            throw new ArgumentException("Only Completed and NoShow are mark outcomes.", nameof(target));
+        }
+
+        if (Status == target)
+        {
+            return MarkCheck.AlreadyMarked;
+        }
+
+        if (Status != AppointmentStatus.Booked)
+        {
+            return MarkCheck.WrongStatus;
+        }
+
+        return nowUtc < StartUtc ? MarkCheck.NotStarted : MarkCheck.Allowed;
+    }
+}
+
+public enum MarkCheck
+{
+    Allowed,
+    AlreadyMarked,
+    WrongStatus,
+    NotStarted
 }

@@ -41,6 +41,8 @@ services:
       Seed__Admin__FirstName: ${SEED_ADMIN_FIRST_NAME:-}
       Seed__Admin__LastName: ${SEED_ADMIN_LAST_NAME:-}
       Seed__Admin__PhoneNumber: ${SEED_ADMIN_PHONE_NUMBER:-}
+      InternalApi__Key: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env (copy .env.example)}
+      Services__Availability__BaseUrl: http://availability:8080
 
   availability:
     <<: *dotnet-service
@@ -70,6 +72,7 @@ services:
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=smart_appointment_booking;Username=postgres;Password=${POSTGRES_PASSWORD}
       InternalApi__Key: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env (copy .env.example)}
       Services__Availability__BaseUrl: http://availability:8080
+      Services__Auth__BaseUrl: http://auth:8080
 
   gateway:
     <<: *dotnet-service

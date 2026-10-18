@@ -34,6 +34,9 @@ public class ApplicationDbContext : DbContext
 
             // Serves the overlap check, and the future "my appointments" list.
             entity.HasIndex(e => new { e.CustomerId, e.StartUtc }).HasDatabaseName("IX_Appointments_CustomerId_StartUtc");
+
+            // Serves the branch day list.
+            entity.HasIndex(e => new { e.BranchId, e.StartUtc }).HasDatabaseName("IX_Appointments_BranchId_StartUtc");
         });
 
         modelBuilder.Entity<IdempotencyRecord>(entity =>

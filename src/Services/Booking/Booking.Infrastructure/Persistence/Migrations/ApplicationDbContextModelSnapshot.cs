@@ -33,6 +33,9 @@ namespace Booking.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("CancelledAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -40,6 +43,9 @@ namespace Booking.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("EndUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("NoShowAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ServiceTypeId")
@@ -60,6 +66,9 @@ namespace Booking.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BranchId", "StartUtc")
+                        .HasDatabaseName("IX_Appointments_BranchId_StartUtc");
 
                     b.HasIndex("CustomerId", "StartUtc")
                         .HasDatabaseName("IX_Appointments_CustomerId_StartUtc");
