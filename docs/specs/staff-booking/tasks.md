@@ -9,7 +9,7 @@
 
 ## Chunk A — Availability internal branch endpoint
 
-- [ ] 1. Internal branch lookup
+- [x] 1. Internal branch lookup
   - `InternalBranchResponse(Id, IsActive, TimeZoneId)` with `From(Branch)`; `GetInternalBranchQuery(Guid Id)` and `GetInternalBranchHandler` (inactive included, `BranchErrors.NotFound` for unknown)
   - `InternalBranchesController` (`internal/branches`, class-level `InternalServicePolicy`, `GET {id:guid}`)
   - Tests: `GetInternalBranchHandlerTests`, `InternalBranchesControllerTests` (policy by reflection, `200`/`404` mapping)
