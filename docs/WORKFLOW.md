@@ -65,7 +65,7 @@ The orchestrator never assumes an answer to a design question. Open decisions ar
 ### 2. Acceptance
 
 - **Entry:** a reviewed plan.
-- **Gate (user):** the user accepts the plan. Every open decision is asked with AskUserQuestion and the answer recorded in the plan. The plan becomes `Accepted`; an RFC becomes `Accepted`, and the decisions it settles are written as ADRs linking to it.
+- **Gate (user):** the user accepts the plan. Every open decision is asked with AskUserQuestion and the answer recorded in the plan. The plan becomes `Accepted`; an RFC becomes `Accepted`, and the decisions it settles are written as ADRs linking to it, with status `Accepted` from the start (the acceptance is the approval). ADRs that come from design stay `Proposed` until the design is approved.
 - **Then the spec trio**, each with its existing gate:
   1. `requirements.md`, then the user approves.
   2. `design.md`, then the user approves. ADRs for each significant decision are written during design as `Proposed`, and become `Accepted` when the design is approved.
@@ -126,7 +126,7 @@ Everything else needs only a plan, a spec and ADRs. An RFC proposes; the decisio
 
 ## Small changes
 
-A bug fix or a one-file tweak that involves no design decision may skip the plan and the spec. It still goes through code review (stage 4) and verification (stage 6), and still ends in a PR. If a design decision turns up, stop and use the full workflow.
+A bug fix or a one-file tweak that involves no design decision may skip the plan and the spec. It still goes through code review (stage 4), architecture review (stage 5, in no-spec mode: the diff is checked against `CLAUDE.md` conventions and the accepted ADRs only, plus any spec the change touches) and verification (stage 6, in no-spec mode: build, full suite and a list of the tests covering the changed code, with no traceability table, `plan.md` status or `docs/specs/README.md` update), and still ends in a PR. `/review` and `/verify` describe these no-spec variants. If a design decision turns up, stop and use the full workflow.
 
 ## Which command to run
 
@@ -134,10 +134,10 @@ A bug fix or a one-file tweak that involves no design decision may skip the plan
 |---|---|---|
 | 0 Plan | `/plan-new <feature>` | Drafts `plan.md` from the template. |
 | 0 Plan | `/rfc-new <title>` | Drafts an RFC with status `Draft`. |
-| 1 Review | `/plan-review <feature>` | Runs `plan-reviewer` (and `architecture-reviewer` on the RFC). |
+| 1-2 Review and acceptance | `/plan-review <feature>` | Runs `plan-reviewer` (and `architecture-reviewer` on the RFC), then takes the plan to user acceptance (stage 2). |
 | 2 Acceptance | `/spec-new <feature>` | Writes `requirements.md`, stops for approval. |
 | 2 Acceptance | `/spec-design <feature>` | Writes `design.md`, stops for approval. |
-| 2 Acceptance | `/adr-new <title>` | Writes an ADR as `Proposed`. Use during design. |
+| 2 Acceptance | `/adr-new <title>` | Writes an ADR as `Proposed` (or `Accepted` when derived from an accepted RFC via `/plan-review`). Use during design. |
 | 2 Acceptance | `/spec-tasks <feature>` | Writes `tasks.md`, stops for approval. |
 | 3 Implementation | `/spec-execute <feature>` | Runs `implementer` chunks and commits after review. |
 | 4 and 5 Reviews | `/review` | Runs `code-reviewer` and `architecture-reviewer` in parallel. |

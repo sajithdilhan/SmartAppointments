@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development workflow
 
-Every feature follows the process in [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (adopted 2026-10-17, [ADR-0001](docs/adr/0001-record-architecture-decisions.md)). Each stage has a gate, and the main session acts as the orchestrator: it plans, briefs subagents and verifies their work, and asks the user about design decisions instead of assuming.
+Every feature follows the process in [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (adopted 2026-10-17, [ADR-0001](docs/adr/0001-record-architecture-decisions.md)). Each stage ends at a gate or an exit condition (the user gates are in stage 2), and the main session acts as the orchestrator: it plans, briefs subagents and verifies their work, and asks the user about design decisions instead of assuming.
 
 | # | Stage | Artefact / action | Who | Command |
 |---|---|---|---|---|
 | 0 | Plan | `docs/specs/<feature>/plan.md` (template in `docs/specs/_templates/`); an RFC in `docs/rfc/` if the change is cross-cutting | orchestrator | `/plan-new`, `/rfc-new` |
-| 1 | Review | Findings on the plan (and the RFC) | `plan-reviewer`, `architecture-reviewer` | `/plan-review` |
-| 2 | Acceptance | User accepts the plan; then `requirements.md` → `design.md` (with Proposed ADRs in `docs/adr/`) → `tasks.md`, each approved before the next | user + orchestrator | `/spec-new`, `/spec-design`, `/adr-new`, `/spec-tasks` |
+| 1 | Review | Findings on the plan (and the RFC) | `plan-reviewer`, `architecture-reviewer` | `/plan-review` (stages 1-2) |
+| 2 | Acceptance | User accepts the plan; then `requirements.md` → `design.md` (with Proposed ADRs in `docs/adr/`) → `tasks.md`, each approved before the next | user + orchestrator | `/plan-review` (also covers acceptance), `/spec-new`, `/spec-design`, `/adr-new`, `/spec-tasks` |
 | 3 | Implementation | Code + tests on a feature branch; orchestrator commits and checks off `tasks.md` | `implementer` (non-overlapping chunks) | `/spec-execute` |
 | 4 | Code review | Findings on the branch diff, fixed and re-reviewed | `code-reviewer` | `/review` |
 | 5 | Architecture review | Diff checked against design, ADRs, RFC and layering (parallel with 4) | `architecture-reviewer` | `/review` |
@@ -19,7 +19,7 @@ Every feature follows the process in [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (ado
 - **RFC** only for cross-cutting changes: a new service, a new infrastructure dependency (RabbitMQ, Redis, outbox), a change to an inter-service contract or to `BuildingBlocks`/`BuildingBlocks.Web`, or a change touching two or more services. Otherwise plan + spec + ADRs.
 - **ADR** for each decision that is hard to reverse, crosses features or services, chooses between real alternatives or departs from a convention. One decision per ADR; accepted ADRs are never edited except their status, a later ADR supersedes them. Decisions made before 2026-10-17 are recorded in the specs and this file, not as ADRs.
 - Agents live in `.claude/agents/` and commands in `.claude/commands/`. Use the subagents for every stage they cover, running independent ones in parallel (always on Sonnet, see below).
-- Small changes (a bug fix or one-file tweak with no design decision) can skip plan and spec, but still get code review and verification.
+- Small changes (a bug fix or one-file tweak with no design decision) can skip plan and spec, but still get code review, architecture review (no-spec mode) and verification, and still end in a PR.
 - Done means the full test suite passes **and** a PR is raised.
 
 ## Project status

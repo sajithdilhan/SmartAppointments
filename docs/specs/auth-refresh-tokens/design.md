@@ -169,11 +169,13 @@ public class TokenGenerator(IOptions<JwtOptions> options, TimeProvider timeProvi
         var now = timeProvider.GetUtcNow().UtcDateTime;
         var expires = now.AddMinutes(expirationMinutes);
         expires = new DateTime(expires.Ticks - expires.Ticks % TimeSpan.TicksPerSecond, DateTimeKind.Utc); // whole seconds, like exp
-        ... descriptor with Expires = expires ...
+        ... descriptor with IssuedAt = now, NotBefore = now, Expires = expires ...
         return new AccessToken(tokenHandler.WriteToken(tokenHandler.CreateToken(descriptor)), expires);
     }
 }
 ```
+
+`iat` and `nbf` come from the same `TimeProvider` as `exp`, because left unset `JwtSecurityTokenHandler` fills them from `DateTime.UtcNow` and rejects (IDX12401) a token whose `exp` is not after `nbf` when the clock is fixed.
 
 `TimeProvider` is **not used anywhere in Auth today**; `AddApplication()` registers `services.AddSingleton(TimeProvider.System)` exactly as Availability and Booking do, and `TokenGenerator` (Infrastructure) receives it from there. `User.RecordLogin()` keeps `DateTime.UtcNow`; it is not part of this feature.
 
