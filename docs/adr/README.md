@@ -9,7 +9,7 @@ The process that produces them is in [`docs/WORKFLOW.md`](../WORKFLOW.md).
 1. **Location and naming.** `docs/adr/NNNN-kebab-title.md`, with a 4-digit sequential number. Numbers are never reused, even for a rejected ADR.
 2. **Statuses.** `Proposed`, `Accepted`, `Rejected`, `Deprecated`, `Superseded by ADR-NNNN`.
 3. **One decision per ADR.**
-4. **Written during design.** An ADR starts as `Proposed` and becomes `Accepted` when the design (or the RFC that led to it) is approved.
+4. **Written during design or at RFC acceptance.** An ADR written during design starts as `Proposed` and becomes `Accepted` when the design is approved. An ADR derived from an RFC is written as `Accepted` when the RFC is accepted.
 5. **Immutable once accepted**, except for its status line. To change a decision, write a new ADR that supersedes it and update the old one's status to `Superseded by ADR-NNNN`.
 6. **When to write one.** The decision is hard to reverse, affects more than one feature or service, picks between real alternatives, or deviates from an existing convention in `CLAUDE.md`.
 7. **No backfill.** Decisions made before ADR-0001 are documented in the specs and `CLAUDE.md`, not as ADRs.

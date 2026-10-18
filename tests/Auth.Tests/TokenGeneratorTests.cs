@@ -64,6 +64,27 @@ public class TokenGeneratorTests
         Assert.Equal(new DateTime(2026, 10, 4, 13, 0, 0, DateTimeKind.Utc), access.ExpiresAtUtc);
     }
 
+    [Theory]
+    [MemberData(nameof(IssuedAtClocks))]
+    public void GenerateAccessToken_Derives_Iat_And_Nbf_From_The_TimeProvider(DateTimeOffset now)
+    {
+        var subject = CreateSubject(now: now);
+
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(subject.GenerateAccessToken(CreateUser(UserRole.Customer)).Value);
+
+        var wholeSeconds = DateTimeOffset.FromUnixTimeSeconds(now.ToUnixTimeSeconds()).UtcDateTime;
+        Assert.Equal(wholeSeconds, token.ValidFrom);
+        Assert.Equal(now.ToUnixTimeSeconds(), long.Parse(token.Claims.Single(c => c.Type == "iat").Value));
+        Assert.Equal(now.ToUnixTimeSeconds(), long.Parse(token.Claims.Single(c => c.Type == "nbf").Value));
+        Assert.True(token.ValidFrom <= token.ValidTo);
+    }
+
+    public static TheoryData<DateTimeOffset> IssuedAtClocks => new()
+    {
+        new DateTimeOffset(2026, 10, 4, 12, 0, 0, 750, TimeSpan.Zero),
+        new DateTimeOffset(2020, 1, 2, 3, 4, 5, TimeSpan.Zero)
+    };
+
     [Fact]
     public void GenerateRefreshToken_Is_64_Random_Bytes()
     {
