@@ -15,8 +15,8 @@ Two points are not obvious:
 |---|---|---|---|
 | Api | `StaffController` (`api/auth/staff`), `InternalUsersController` (`internal/users`); `AddApiKeyAuthentication` in `Program.cs` | `InternalBranchesController` (`internal/branches`) | 3 new actions on `AppointmentsController`; `branch_id` read in a controller helper |
 | Application | `CreateStaffCommand`, `AssignStaffBranchCommand`, `LookupUsersQuery`, validators, handlers; `IAvailabilityClient`; `StaffResponse`, `UserLookupItem` | `GetInternalBranchQuery`, handler, `InternalBranchResponse` | `ListBranchAppointmentsQuery`, `MarkAppointmentCommand`, validators, handlers, `BranchDay`, `BranchAppointmentsParameters`; `IAuthClient`, `IBranchTimeZoneProvider`; extended `IAvailabilityClient`, `IAppointmentRepository`, `GetAppointmentQuery`, `CancelAppointmentCommand` |
-| Domain | `User.BranchId`, `RegisterStaff(..., branchId)`, `AssignBranch` | — | `AppointmentStatus.Completed`/`NoShow`, `CompletedAtUtc`, `NoShowAtUtc`, `Complete`, `MarkNoShow` |
-| Infrastructure | Migration `AddStaffBranch`; `branch_id` claim; `RevokeAllForUserAsync`; `ListByIdsAsync`, `GetForUpdateByIdAsync`; `AvailabilityClient` + `AddAvailabilityClient` | — | Migration `AddAppointmentOutcomes`; conditional updates; `ListForBranchAsync`; `AuthClient` + `AddAuthClient`; `GetBranchAsync`; `CachedBranchTimeZoneProvider` |
+| Domain | `User.BranchId`, `RegisterStaff(..., branchId)`, `AssignBranch` | — | `AppointmentStatus.Completed`/`NoShow`, `CompletedAtUtc`, `NoShowAtUtc`, `CheckMark` |
+| Infrastructure | Migration `AddStaffBranch`; `branch_id` claim; `SaveBranchMoveAsync`; `ListByIdsAsync`, `GetForUpdateByIdAsync`; `AvailabilityClient` + `AddAvailabilityClient` | — | Migration `AddAppointmentOutcomes`; conditional updates; `ListForBranchAsync`; `AuthClient` + `AddAuthClient`; `GetBranchAsync`; `CachedBranchTimeZoneProvider` |
 | Shared | `BuildingBlocks/Constants.BranchIdClaimType = "branch_id"` (constant only) | | |
 
 Dependencies keep the direction Api → Application → Domain and Infrastructure → Application. No project references cross services; Auth and Availability, and Booking and Auth, talk only through the internal HTTP endpoints under `InternalServicePolicy`. The gateway is unchanged: `/api/auth/{**catch-all}` and `/api/appointments/{**catch-all}` already route the new paths, only `POST /api/appointments` is rate-limited, the CORS policy is path-independent, and `/internal/**` is never routed (Req 9.4, 12.2).
@@ -57,7 +57,7 @@ The Booking controller gets a helper `Guid? CallerBranchId => Guid.TryParse(User
   3. If `user.BranchId == branchId` → `200`, no revoke (Req 2.4).
   4. Check the branch as in create (`422`/`503`, user unchanged, Req 2.3).
   5. `user.AssignBranch(branchId)`, `SaveChangesAsync`.
-  6. `refreshTokens.RevokeAllForUserAsync(user.Id, now)`.
+  6. `users.SaveBranchMoveAsync(user, now)`: the save and the revoke in one transaction (see Changes from the review).
 
   Saving before revoking means a failed save leaves both unchanged. A failure between the two (the database lost mid-request) leaves the new branch saved with sessions still live, which the next refresh corrects anyway; this is accepted rather than wrapped in a cross-repository transaction.
 - `LookupUsersHandler` (Req 9): validate (`ids` present, 1 to 100, non-empty GUIDs), de-duplicate, `ListByIdsAsync`, map to `UserLookupItem(Id, FirstName, LastName, PhoneNumber)`. It returns users of every role; Booking only ever asks for its customers' ids.
@@ -110,8 +110,8 @@ public sealed record BranchInfo(Guid Id, bool IsActive, string? TimeZoneId);
 Task<User?> GetForUpdateByIdAsync(Guid id, CancellationToken ct);
 Task<IReadOnlyList<User>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct);
 
-// IRefreshTokenRepository addition: ExecuteUpdate on UserId && RevokedAtUtc == null
-Task<int> RevokeAllForUserAsync(Guid userId, DateTime nowUtc, CancellationToken ct);
+// IUserRepository addition (replaces a separate revoke): save the user, then ExecuteUpdate on RefreshTokens (UserId && RevokedAtUtc == null), one transaction
+Task<int> SaveBranchMoveAsync(User user, DateTime nowUtc, CancellationToken ct); // on IUserRepository: save + revoke all, one transaction
 
 // Booking.Application/Abstractions
 // IAvailabilityClient gains:
@@ -198,7 +198,7 @@ context.Appointments.Where(a => a.Id == id && a.Status == AppointmentStatus.Book
         /* same for CompletedAtUtc, NoShowAtUtc */, ct) == 1
 ```
 
-The domain methods `Appointment.Complete(now)` and `MarkNoShow(now)` hold the same rules (`Booked` only, not before start) for unit tests and stay the single description of the rules. Handlers check them on the read copy before the conditional update (ADR-0006).
+The domain predicate `Appointment.CheckMark(target, now)` is the single description of the mark rules (`Booked` only, not before start, a repeat allowed); `MarkAppointmentHandler` applies it to the read copy before the conditional update and to the re-read copy after a lost race (ADR-0006).
 
 `ListForBranchAsync` copies `ListForCustomerAsync`: `AsNoTracking`, `BranchId == branchId && StartUtc >= from && StartUtc < to`, optional status, count, the skip guard, `OrderBy(StartUtc).ThenBy(Id)`, `Skip`/`Take`.
 
@@ -242,7 +242,7 @@ xUnit + Moq, flat `*Tests.cs` files, the `FixedTimeProvider` of each project, ha
 | 11 (Availability) | `GetInternalBranchHandlerTests` (inactive included, null zone, `404`), `InternalBranchesControllerTests` |
 | 4 | `GetAppointmentHandlerTests`: staff same branch `200`, other branch `404`, no claim `404`, admin and owner unchanged |
 | 5, 6 | `ListBranchAppointmentsHandlerTests` (`403` other branch and no claim, admin any branch, default date, UTC fallback, `503` zone failure, names merged, unknown customer null, Auth failure → `customersUnavailable`, no lookup on an empty page, validation before any call), `ListBranchAppointmentsQueryValidatorTests`, `BranchAppointmentsParametersTests`, `BranchDayTests` (Pacific/Auckland and America/New_York ordinary days, both DST transitions with 23 and 25 hour ranges, UTC fallback, unknown zone id), `CachedBranchTimeZoneProviderTests`, `AuthClientTests` |
-| 7, 8 | `AppointmentTests` (`Complete`, `MarkNoShow` rules), `MarkAppointmentHandlerTests` (each status × target, before start, repeat `200` without update, stale update re-read giving `200` or `409`, other branch `404`, admin), `CancelAppointmentHandlerTests` additions (`409` for Completed/NoShow, lost race), `MyAppointmentsParametersTests` and validator (new statuses), `AppointmentsControllerTests` (new actions, policies, `CallerBranchId` parsing) |
+| 7, 8 | `AppointmentTests` (`CheckMark` rules), `MarkAppointmentHandlerTests` (each status × target, before start, repeat `200` without update, stale update re-read giving `200` or `409`, other branch `404`, admin), `CancelAppointmentHandlerTests` additions (`409` for Completed/NoShow, lost race), `MyAppointmentsParametersTests` and validator (new statuses), `AppointmentsControllerTests` (new actions, policies, `CallerBranchId` parsing) |
 | 12 | `ShippedSettingsTests`/`DatabaseMigratorTests` style checks that the new keys ship empty in `appsettings.json` and filled in Development; manual Compose check |
 
 The repository `ExecuteUpdateAsync` and query code is covered by the manual end-to-end check, as the existing repositories are (there is no database test harness yet).
@@ -261,7 +261,7 @@ Every criterion in requirements 1 to 12 maps to a decision above:
 | 7 | `MarkAppointmentHandler`, `TryTransitionAsync` |
 | 8 | Statuses, response fields, cancel changes, `/my` parameters |
 | 9 | `LookupUsersHandler`, API key in Auth |
-| 10 | `RevokeAllForUserAsync` |
+| 10 | `SaveBranchMoveAsync` |
 | 11 | `GetInternalBranchHandler` and the clients |
 | 12 | Configuration, Compose, docs, `.http` |
 
@@ -284,7 +284,7 @@ Where the code differs from, or fills a gap in, the design above:
 
 ### Changes from the code and architecture review
 
-- **Branch move is one transaction** (review Major): saving the new `BranchId` and revoking the user's refresh tokens happen in one database transaction (`IUserRepository.SaveBranchMoveAsync`, in the style of `TryRotateAsync`), replacing "save, then revoke"; `IRefreshTokenRepository.RevokeAllForUserAsync` named above was removed as unused. A failure leaves both unchanged, so the admin's retry does the whole move. This supersedes the "accepted" partial-failure case in the handler description above.
+- **Branch move is one transaction** (review Major): saving the new `BranchId` and revoking the user's refresh tokens happen in one database transaction (`IUserRepository.SaveBranchMoveAsync`, in the style of `TryRotateAsync`), replacing "save, then revoke". ADR-0007's mention of `IRefreshTokenRepository.RevokeAllForUserAsync` names a mechanism that this replaces; the decision (revoke every family on a branch change) is unchanged and the ADR stays as accepted. A failure leaves both unchanged, so the admin's retry does the whole move. This supersedes the "accepted" partial-failure case in the handler description above.
 - **The domain owns the mark rules**: `Appointment.CheckMark(target, now)` states the rules (`Booked` only, not before start, repeat allowed) and `MarkAppointmentHandler` uses it on the read and re-read copies before and after the conditional update; the unused `Complete`/`MarkNoShow` mutators were removed.
 - **Unknown zone ids are logged**: when Availability returns a time zone the runtime does not know, the branch list still uses the UTC day (Req 6.3) but logs a warning naming the branch and zone.
 
