@@ -28,3 +28,5 @@ Start from [`_template.md`](_template.md).
 | [0005](0005-booking-reads-customers-from-auth.md) | Booking reads customer display data from Auth through a batch lookup | Accepted | 2026-10-18 | [RFC-0001](../rfc/0001-staff-branch-assignment.md) |
 | [0006](0006-conditional-appointment-transitions.md) | Appointment state transitions use conditional updates | Accepted | 2026-10-18 | [RFC-0001](../rfc/0001-staff-branch-assignment.md) |
 | [0007](0007-revoke-sessions-on-staff-reassignment.md) | Revoke all of a staff member's sessions when their branch changes | Accepted | 2026-10-18 | [RFC-0001](../rfc/0001-staff-branch-assignment.md) |
+| [0008](0008-soft-delete-staff-accounts.md) | Soft-delete staff accounts | Accepted | 2026-10-24 | [staff-management](../specs/staff-management/design.md) |
+| [0009](0009-end-sessions-on-staff-deactivation-and-deletion.md) | End all sessions when a staff account is deactivated or deleted | Accepted | 2026-10-24 | [staff-management](../specs/staff-management/design.md) |
