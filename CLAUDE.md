@@ -18,7 +18,7 @@ Every feature follows the process in [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (ado
 
 - **RFC** only for cross-cutting changes: a new service, a new infrastructure dependency (RabbitMQ, Redis, outbox), a change to an inter-service contract or to `BuildingBlocks`/`BuildingBlocks.Web`, or a change touching two or more services. Otherwise plan + spec + ADRs.
 - **ADR** for each decision that is hard to reverse, crosses features or services, chooses between real alternatives or departs from a convention. One decision per ADR; accepted ADRs are never edited except their status, a later ADR supersedes them. Decisions made before 2026-10-17 are recorded in the specs and this file, not as ADRs.
-- Agents live in `.claude/agents/` and commands in `.claude/commands/`. Use the subagents for every stage they cover, running independent ones in parallel (always on Sonnet, see below).
+- Agents live in `.claude/agents/` and commands in `.claude/commands/`. Use the subagents for every stage they cover, running independent ones in parallel (on Sonnet; exploration-only helpers on Haiku, see below).
 - Small changes (a bug fix or one-file tweak with no design decision) can skip plan and spec, but still get code review, architecture review (no-spec mode) and verification, and still end in a PR.
 - Done means the full test suite passes **and** a PR is raised.
 
@@ -125,12 +125,19 @@ When adding a new service, mirror the Auth service's project layout and DI wirin
 
 ## Working with Claude Code subagents
 
-When delegating work to a subagent (the `Agent` tool), run it on **Sonnet** — pass `model: "sonnet"`
-explicitly on every spawn rather than letting it inherit the parent session's model. Sonnet is the
-project's chosen subagent model because delegated tasks (codebase searches, spec drafting, focused
-refactors) don't need the larger model and run faster and cheaper on it. The intended model is
-**Sonnet 5.5**; the `sonnet` alias resolves to the latest Sonnet release, so it picks up Sonnet 5.5
-without pinning a version-specific model ID.
+Always pass the model explicitly on every spawn of the `Agent` tool rather than letting it inherit the
+parent session's model, and pick it by how much reasoning the task needs:
+
+- **Haiku** (`model: "haiku"`, Haiku 5.5) for exploration and other low-reasoning work: codebase
+  searches, locating files or usages, reading and summarising code or docs, listing what exists. The
+  built-in `Explore` agent and ad-hoc `general-purpose` lookups go here.
+- **Sonnet** (`model: "sonnet"`, Sonnet 5.5) for everything that needs judgement: the workflow agents
+  (planning reviews, implementation, code and architecture review, verification), spec drafting and
+  focused refactors.
+
+Neither task needs the larger model, and both run faster and cheaper on these. The `haiku` and `sonnet`
+aliases resolve to the latest release of each, so they pick up Haiku 5.5 and Sonnet 5.5 without pinning
+a version-specific model ID. When unsure whether a task is "exploration", use Sonnet.
 
 The project subagents in `.claude/agents/` (`plan-reviewer`, `implementer`, `code-reviewer`,
 `architecture-reviewer`, `test-verifier`) already set `model: sonnet`; still pass it on the spawn. The

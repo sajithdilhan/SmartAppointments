@@ -16,7 +16,7 @@ This is the authoritative description of how a change goes from idea to merged p
 | `architecture-reviewer` | Subagent (Sonnet) | Reviews an RFC; later checks the diff against `design.md`, the accepted ADRs and the RFC, and the Clean Architecture layering rules. Read-only. |
 | `test-verifier` | Subagent (Sonnet) | Builds and tests the solution, maps every acceptance criterion to the tests covering it, reports gaps. |
 
-The agents are defined in `.claude/agents/`. All run on Sonnet.
+The agents are defined in `.claude/agents/`. All run on Sonnet. Exploration-only helpers the orchestrator spawns (codebase searches, locating files, summarising code or docs, e.g. the built-in `Explore` agent) run on Haiku (`model: "haiku"`), since they need little reasoning.
 
 The orchestrator never assumes an answer to a design question. Open decisions are asked of the user with AskUserQuestion.
 
