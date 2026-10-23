@@ -90,7 +90,7 @@ All in the **Auth** service, on the existing admin-only `StaffController` (`401`
 ## Open decisions
 
 Answered on 2026-10-24:
-- Delete is a **soft delete** (`DeletedAtUtc`), hidden everywhere, email stays taken.
+- Delete is a **soft delete** (`DeletedAtUtc`), hidden from the staff endpoints and profile lookup (see decision 1 below), email stays taken.
 - Deactivation and deletion **revoke all sessions** in the same transaction.
 - Reactivation **checks the branch** (`422` inactive or unknown, `503` Availability down).
 - The list **includes deactivated accounts**, with `isActive` on each item and an `isActive` filter.
@@ -113,7 +113,7 @@ Raised by the plan review (2026-10-24):
 
    Recommended: A, so an admin can move someone to an active branch and then reactivate them. That is the way out of the reactivation `422` when the old branch has closed. Answer (2026-10-24): **A, allow it**.
 
-Left to design: confirming the sort order, and a repeat `DELETE` (`404`, since the account is now unknown, or `204`).
+Settled while writing requirements (2026-10-24): a repeat `DELETE` is **`404`**, since the account is then unknown. The sort order is registration instant, then `id`.
 
 ## ADRs expected
 
