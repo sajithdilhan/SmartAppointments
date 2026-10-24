@@ -21,7 +21,7 @@ The only non-obvious part is a race. EF Core updates only the columns a request 
 | `Auth.Domain` | `User.DeletedAtUtc`, `User.IsDeleted`, `User.CanSignIn`, `User.MarkDeleted(DateTime)`; `Activate` refuses a deleted user |
 | `Auth.Infrastructure` | `UserRepository.SaveAndRevokeSessionsAsync` (renamed from `SaveBranchMoveAsync`), `ListStaffAsync`; `DeletedAtUtc` mapping; migration `AddUserDeletedAt` |
 
-Dependencies keep their direction: Api → Application → Domain, Infrastructure → Application. Nothing is added to BuildingBlocks or BuildingBlocks.Web. MediatR finds the new handlers by assembly scanning. The one new validator is registered explicitly in `Auth.Application/Dependency/DependencyInjection.cs` (`services.AddScoped<IValidator<ListStaffQuery>, ListStaffQueryValidator>()`), as every existing validator is.
+Dependencies keep their direction: Api → Application → Domain, Infrastructure → Application. Nothing is added to BuildingBlocks or BuildingBlocks.Web. MediatR finds the new handlers by assembly scanning. The one new validator is registered explicitly in `Auth.Application/Dependency/DependencyInjection.cs` (`services.AddScoped<IValidator<ListStaffQuery>, ListStaffQueryValidator>()`), as every existing validator is. `Auth.Application.csproj` gains `<InternalsVisibleTo Include="Auth.Tests" />` so the internal `StaffListParameters` can be tested directly, as Booking does for its parameter helper.
 
 ## Components and interfaces
 
@@ -122,7 +122,7 @@ Task<StaffListPage> ListStaffAsync(Guid? branchId, bool? isActive, int page, int
 
 `StaffListPage(IReadOnlyList<User> Items, int TotalCount)` is declared beside the interface, as Booking's `AppointmentPage` is.
 
-**`ListStaffAsync`** builds one `IQueryable`: `Role == Staff && DeletedAtUtc == null`, plus the optional filters. It runs `CountAsync`, then `OrderBy(RegistrationDateUtc).ThenBy(Id).Skip((page-1)*pageSize).Take(pageSize).ToListAsync()`. Only the page and the count are read (Req 2.2–2.8, 2.11). These are two queries, as Booking does. A staff member created between them can make the count one off, which is accepted.
+**`ListStaffAsync`** builds one `IQueryable`: `Role == Staff && DeletedAtUtc == null`, plus the optional filters. It runs `CountAsync`, then `OrderBy(RegistrationDateUtc).ThenBy(Id).Skip((page-1)*pageSize).Take(pageSize).ToListAsync()`. Only the page and the count are read (Req 2.2–2.8, 2.11). These are two queries, as Booking does. A staff member created between them can make the count one off, which is accepted. As in Booking's `ListForCustomerAsync`, the skip is computed as a `long` (a page near `int.MaxValue` would overflow an `int`), and when it is at or past the total the page query is skipped and an empty page is returned with the real total (Req 2.9).
 
 **`SaveAndRevokeSessionsAsync`** keeps the body of `SaveBranchMoveAsync` (transaction, `SaveChangesAsync`, then `ExecuteUpdateAsync` setting `RevokedAtUtc` on the user's unrevoked tokens) and its comment about the execution strategy. Only the name and doc comment change.
 
@@ -162,6 +162,7 @@ EF Core configuration in `ApplicationDbContext`: `entity.Property(e => e.Deleted
 | Activate vs delete | The row may end deleted with `IsActive = true`. | `CanSignIn` is false and every handler treats it as deleted (Req 6.3). |
 | Activate vs deactivate | The last writer wins. | Either end state is a valid admin outcome. Sessions were revoked by the deactivation either way. |
 | Move vs delete | The deleted row may get the new `BranchId`. | It stays deleted and hidden, so the change is harmless. |
+| Delete vs delete | Both requests can pass the not-deleted check and both return `204`; the later `DeletedAtUtc` wins. | The account ends deleted with its sessions revoked either way. Only the recorded instant may be a moment later, and a sequential second `DELETE` is still `404` (Req 6.3). |
 
 There is no optimistic concurrency token. Adding one to `User` would affect every user write, and none of these races breaks a requirement.
 
