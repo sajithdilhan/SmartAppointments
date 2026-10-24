@@ -50,30 +50,30 @@
 
 ## Chunk B — Reads
 
-- [ ] 9. List parameters, query and validator
+- [x] 9. List parameters, query and validator
   - `StaffListParameters` (internal static, `Auth.Application/Models`): `TryParseBranchId`, `TryParseIsActive`, `TryParsePage`, `TryParsePageSize` with `DefaultPage = 1`, `DefaultPageSize = 20`, `MaxPageSize = 100`, per the design's table
   - `ListStaffQuery(string? BranchId, string? IsActive, string? Page, string? PageSize) : IRequest<Result<StaffPage>>`; `StaffPage(Items, Page, PageSize, TotalCount)`
   - `ListStaffQueryValidator` (one rule and message per parameter) registered in `AddApplication()`
   - `StaffListParametersTests` (accepted, rejected and default values incl. `+1`, `1.0`, `-1`, `""`, `TRUE`, `1`, `Guid.Empty`, `xyz`) and `ListStaffQueryValidatorTests` (each rule alone; `isActive=x`, `branchId=xyz`, `page=0` together give three messages)
   - _Requirements: 2.3, 2.4, 2.5, 2.9, 2.10_
 
-- [ ] 10. List repository query
+- [x] 10. List repository query
   - `StaffListPage(IReadOnlyList<User> Items, int TotalCount)` beside `IUserRepository`; `ListStaffAsync(Guid? branchId, bool? isActive, int page, int pageSize, CancellationToken)`
   - `UserRepository.ListStaffAsync`: no tracking; `Role == Staff && DeletedAtUtc == null`, optional branch and active filters (AND); `CountAsync`, then order by `RegistrationDateUtc`, `Id`, `Skip`/`Take`
   - Update any test double implementing `IUserRepository` so the solution builds
   - _Requirements: 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.11_
 
-- [ ] 11. List handler
+- [x] 11. List handler
   - `ListStaffHandler(IUserRepository, IValidator<ListStaffQuery>)`: validate (one `Error(400, "Invalid request data. Errors: ...")`, repository untouched on failure), parse, call `ListStaffAsync`, map with `StaffResponse.From` into `StaffPage`
   - `ListStaffHandlerTests`: defaults; parsed `branchId`, `isActive`, `page` and `pageSize` reach the repository; mapping and `totalCount`; empty and beyond-the-end pages are `200`; invalid input never calls the repository
   - _Requirements: 2.1, 2.3, 2.4, 2.5, 2.6, 2.7, 2.9, 2.10_
 
-- [ ] 12. Read one
+- [x] 12. Read one
   - `GetStaffQuery(Guid Id) : IRequest<Result<StaffResponse>>` and `GetStaffHandler(IUserRepository)` over `GetByIdAsync`
   - `GetStaffHandlerTests`: active and inactive staff `200` with the shape; `404` for unknown, customer, admin and deleted ids
   - _Requirements: 3.1, 3.2, 8.3_
 
-- [ ] 13. List and get actions; create's `Location`
+- [x] 13. List and get actions; create's `Location`
   - `GET` (`List`): `[FromQuery] string?` `branchId`, `isActive`, `page`, `pageSize` through a private `Raw(name, bound)` helper (copied from Booking's `AppointmentsController`), `Ok(page)` or `this.ToActionResult`
   - `GET {id:guid}` (`Get`): `Ok` or `this.ToActionResult`
   - `Create`: `CreatedAtAction(nameof(Get), new { id = value.Id }, value)`; remove the "No staff GET exists" comment

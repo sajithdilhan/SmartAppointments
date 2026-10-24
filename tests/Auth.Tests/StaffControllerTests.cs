@@ -2,8 +2,10 @@ using System.Reflection;
 using Auth.Api.Controllers;
 using Auth.Application.Commands;
 using Auth.Application.Models;
+using Auth.Application.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Moq;
@@ -29,8 +31,10 @@ public class StaffControllerTests
 
         var result = await new StaffController(_sender.Object).Create(request, CancellationToken.None);
 
-        var created = Assert.IsType<ObjectResult>(result);
+        var created = Assert.IsType<CreatedAtActionResult>(result);
         Assert.Equal(201, created.StatusCode);
+        Assert.Equal(nameof(StaffController.Get), created.ActionName);
+        Assert.Equal(Staff.Id, created.RouteValues!["id"]);
         Assert.Same(Staff, created.Value);
         _sender.Verify(s => s.Send(
             It.Is<CreateStaffCommand>(c => c.Email == "sam@example.com" && c.BranchId == BranchId && c.Password == "P@ssw0rd!23" && c.FirstName == "Sam"),
@@ -50,6 +54,96 @@ public class StaffControllerTests
             new CreateStaffRequest("a", "b", "c", "d", "e", BranchId), CancellationToken.None);
 
         Assert.Equal(status, Assert.IsAssignableFrom<IStatusCodeActionResult>(result).StatusCode);
+    }
+
+    private StaffController ControllerWithQuery(string queryString) =>
+        new(_sender.Object)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { Request = { QueryString = new QueryString(queryString) } }
+            }
+        };
+
+    [Fact]
+    public async Task List_Returns_200_With_The_Page_And_Sends_The_Raw_Query_Strings()
+    {
+        var page = new StaffPage([Staff], 2, 5, 11);
+        _sender.Setup(s => s.Send(It.IsAny<ListStaffQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<StaffPage>.Success(page));
+
+        var result = await ControllerWithQuery("?isActive=TRUE&page=abc").List(
+            BranchId.ToString(), "TRUE", "abc", null, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Same(page, ok.Value);
+        _sender.Verify(s => s.Send(
+            new ListStaffQuery(BranchId.ToString(), "TRUE", "abc", null), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("?branchId=&isActive=&page=&pageSize=")]
+    [InlineData("")]
+    public async Task List_Keeps_An_Empty_Query_Value_Empty_And_An_Omitted_One_Null(string queryString)
+    {
+        _sender.Setup(s => s.Send(It.IsAny<ListStaffQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<StaffPage>.Success(new StaffPage([], 1, 20, 0)));
+        // MVC binds an empty value to null, the same as an omitted one.
+        var expected = queryString == "" ? null : "";
+
+        await ControllerWithQuery(queryString).List(null, null, null, null, CancellationToken.None);
+
+        _sender.Verify(s => s.Send(
+            new ListStaffQuery(expected, expected, expected, expected), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task List_Maps_A_400_To_The_Problem_Result()
+    {
+        _sender.Setup(s => s.Send(It.IsAny<ListStaffQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<StaffPage>.Failure(new Error(400, "bad")));
+
+        var result = await ControllerWithQuery("").List(null, null, null, null, CancellationToken.None);
+
+        Assert.Equal(400, Assert.IsAssignableFrom<IStatusCodeActionResult>(result).StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_Returns_200_And_Dispatches_The_Id()
+    {
+        _sender.Setup(s => s.Send(It.IsAny<GetStaffQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<StaffResponse>.Success(Staff));
+
+        var result = await new StaffController(_sender.Object).Get(Staff.Id, CancellationToken.None);
+
+        Assert.Same(Staff, Assert.IsType<OkObjectResult>(result).Value);
+        _sender.Verify(s => s.Send(It.Is<GetStaffQuery>(q => q.Id == Staff.Id), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Get_Maps_404_To_The_Problem_Result()
+    {
+        _sender.Setup(s => s.Send(It.IsAny<GetStaffQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<StaffResponse>.Failure(new Error(404, "problem")));
+
+        var result = await new StaffController(_sender.Object).Get(Staff.Id, CancellationToken.None);
+
+        Assert.Equal(404, Assert.IsAssignableFrom<IStatusCodeActionResult>(result).StatusCode);
+    }
+
+    [Fact]
+    public void List_And_Get_Are_Routed_As_Specified_And_Covered_By_The_Class_Level_Admin_Policy()
+    {
+        var list = typeof(StaffController).GetMethod(nameof(StaffController.List))!;
+        var get = typeof(StaffController).GetMethod(nameof(StaffController.Get))!;
+
+        Assert.Null(list.GetCustomAttribute<HttpGetAttribute>()!.Template);
+        Assert.Equal("{id:guid}", get.GetCustomAttribute<HttpGetAttribute>()!.Template);
+        foreach (var action in new[] { list, get })
+        {
+            Assert.Null(action.GetCustomAttribute<AllowAnonymousAttribute>());
+            Assert.Null(action.GetCustomAttribute<AuthorizeAttribute>());
+        }
     }
 
     [Fact]

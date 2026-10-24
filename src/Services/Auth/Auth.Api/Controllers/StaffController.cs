@@ -1,5 +1,6 @@
 using Auth.Application.Commands;
 using Auth.Application.Models;
+using Auth.Application.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,8 +41,52 @@ public class StaffController(ISender sender) : ControllerBase
             return this.ToActionResult(result.Error!);
         }
 
-        // No staff GET exists to point a Location header at.
-        return StatusCode(StatusCodes.Status201Created, result.Value);
+        return CreatedAtAction(nameof(Get), new { id = result.Value!.Id }, result.Value);
+    }
+
+    /// <summary>
+    /// Lists staff accounts (not deleted ones), oldest registration first. Optional <c>branchId</c>,
+    /// <c>isActive</c> (true or false), <c>page</c> (default 1) and <c>pageSize</c> (default 20, max 100).
+    /// </summary>
+    // The four values are bound as strings so that a bad one reaches the validator, which lists every
+    // failure in one 400, instead of failing model binding. MVC binds "?isActive=" to null, the same as
+    // an omitted parameter, so Raw() restores "" from the query string (an empty value is invalid).
+    [HttpGet]
+    [ProducesResponseType<StaffPage>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> List(
+        [FromQuery] string? branchId,
+        [FromQuery] string? isActive,
+        [FromQuery] string? page,
+        [FromQuery] string? pageSize,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new ListStaffQuery(Raw("branchId", branchId), Raw("isActive", isActive), Raw("page", page), Raw("pageSize", pageSize)),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return this.ToActionResult(result.Error!);
+        }
+
+        return Ok(result.Value);
+    }
+
+    /// <summary>Reads one staff account, active or not. Deleted accounts and non-staff users are 404.</summary>
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType<StaffResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new GetStaffQuery(id), cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return this.ToActionResult(result.Error!);
+        }
+
+        return Ok(result.Value);
     }
 
     /// <summary>
@@ -106,6 +151,9 @@ public class StaffController(ISender sender) : ControllerBase
 
         return NoContent();
     }
+
+    private string? Raw(string name, string? bound) =>
+        bound ?? (Request.Query.ContainsKey(name) ? string.Empty : null);
 
     private async Task<IActionResult> SetActive(Guid id, bool isActive, CancellationToken cancellationToken)
     {

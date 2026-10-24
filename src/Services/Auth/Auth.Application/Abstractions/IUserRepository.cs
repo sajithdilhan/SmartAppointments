@@ -44,4 +44,13 @@ public interface IUserRepository
     /// transaction (both or neither). Returns the number of tokens revoked. Used by move, deactivate, delete.
     /// </summary>
     Task<int> SaveAndRevokeSessionsAsync(User user, DateTime nowUtc, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Non-deleted users with role Staff, optionally by branch and active flag (AND), ordered by
+    /// RegistrationDateUtc then Id, one page plus the total across all pages. No tracking.
+    /// </summary>
+    Task<StaffListPage> ListStaffAsync(Guid? branchId, bool? isActive, int page, int pageSize, CancellationToken cancellationToken);
 }
+
+/// <summary>One page of staff users and the total number across all pages.</summary>
+public sealed record StaffListPage(IReadOnlyList<User> Items, int TotalCount);
