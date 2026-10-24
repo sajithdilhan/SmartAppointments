@@ -1,6 +1,6 @@
 # Staff management — Plan
 
-**Status:** Accepted (2026-10-24)
+**Status:** Implemented (2026-10-24)
 
 ## Problem and goal
 

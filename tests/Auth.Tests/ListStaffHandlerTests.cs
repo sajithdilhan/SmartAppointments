@@ -38,6 +38,16 @@ public class ListStaffHandlerTests
     }
 
     [Fact]
+    public async Task An_Empty_Page_Gives_No_Items_And_A_Zero_Total()
+    {
+        var result = await Send();
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Value!.Items);
+        Assert.Equal(0, result.Value.TotalCount);
+    }
+
+    [Fact]
     public async Task Parsed_Filters_And_Paging_Reach_The_Repository()
     {
         await Send(Branch.ToString(), "FALSE", "3", "50");

@@ -1,5 +1,14 @@
 # Staff management — Tasks
 
+> **Manual verification (task 15).** Date 2026-10-24, on the Compose stack (Auth rebuilt from this branch with `docker compose up --build -d auth`; `Database:MigrateOnStartup` applied `AddUserDeletedAt`, column `Users.DeletedAtUtc timestamp with time zone` present), requests with curl through the gateway on 5290 as the QA admin. `dotnet test SmartAppointments.slnx` green: BuildingBlocks 73, Gateway 138, Availability 310, Booking 359, Auth 391. `/healthz` `Healthy` for all four. No bug found; no code changed.
+> - Create: `201` with `Location: http://localhost:5290/api/auth/staff/{id}` (gateway host); following it gives `200` with the same body, which carries `isActive` and `registeredAtUtc`.
+> - List: only role `Staff` (6 of 6 items, no customers or admins), oldest registration first. `branchId` narrows to that branch's 2; `isActive=false` gives 0 before any deactivation; a branch with no staff gives `200` with empty `items` and `totalCount` 0. `pageSize=1&page=2` gives the second oldest with the same `totalCount`; `page=999` gives `200`, empty, `totalCount` 6. `isActive=x&branchId=xyz&page=0&pageSize=500` gives one `400` naming all four; `isActive=` (empty) gives `400`.
+> - Read one: a customer id, the admin's id and `abc` all `404`. No token `401`; a customer token on list, deactivate and delete `403`.
+> - Deactivate: `204`, repeat `204`. The old refresh token `401`, login `401`; the access token issued before still lists the branch's appointments and reads `/me` (`200`, the accepted window). The list shows `isActive: false`; the user has 0 unrevoked refresh tokens.
+> - Reactivate: with the branch deactivated in Availability `422` and the account stays inactive; moving the inactive account to another branch `200` (`isActive: false` kept); after reopening, activate `204`, repeat `204`, login `200`.
+> - Delete: `204`; second `DELETE` `404`; get, activate, deactivate and move on its id `404`; gone from the list (`totalCount` 6 → 5); profile-by-email `404`; login `401`; register and create-staff with its email `400 "Email is already registered."`. The row stays (`IsActive` false, `DeletedAtUtc` set, 0 live tokens), and Auth's internal lookup (called on the Compose network with the API key) still returns its name.
+> - OpenAPI: `/openapi/auth/v1.json` through the gateway lists `/api/auth/staff`, `/{id}`, `/{id}/activate`, `/{id}/deactivate` and `/{id}/branch`, with a `delete` operation.
+
 > Each task leaves `dotnet build SmartAppointments.slnx` and `dotnet test SmartAppointments.slnx` green. Do them in order within a chunk. All code is in the Auth service and `tests/Auth.Tests`, in the xUnit + Moq style. The design is final; ADR-0008 and ADR-0009 are Accepted.
 
 ## Chunk A — Lifecycle
@@ -89,7 +98,7 @@
   - `CLAUDE.md` Auth description; `docs/specs/README.md` row
   - _Requirements: 8.4, 8.5_
 
-- [ ] 15. Manual verification through the gateway
+- [x] 15. Manual verification through the gateway
   - The plan's end-to-end checks on `docker compose up --build`, results recorded at the top of this file
   - _Requirements: 2.2, 2.8, 2.11, 3.4, 4.3, 4.4, 5.2, 6.3, 6.4, 6.6, 8.1, 8.2, 8.4_
 

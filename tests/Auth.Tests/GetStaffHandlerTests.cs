@@ -73,6 +73,18 @@ public class GetStaffHandlerTests
     }
 
     [Fact]
+    public async Task An_Admin_Is_404()
+    {
+        var admin = User.RegisterAdmin("Ada", "Admin", Email.Create("ada@example.com"), "+15551234567", "hash");
+        _users.Setup(r => r.GetByIdAsync(admin.Id, It.IsAny<CancellationToken>())).ReturnsAsync(admin);
+
+        var result = await Send(admin.Id);
+
+        Assert.Equal(404, result.Error!.Status);
+        Assert.Equal($"Staff member '{admin.Id}' was not found.", result.Error.Details);
+    }
+
+    [Fact]
     public async Task A_Deleted_Staff_Member_Is_404()
     {
         var staff = NewStaff();
