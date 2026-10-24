@@ -68,7 +68,7 @@ public class RefreshTokenCommandHandler(
         }
 
         var user = await userRepository.GetByIdAsync(stored.UserId, cancellationToken);
-        if (user is null || !user.IsActive)
+        if (user is null || !user.CanSignIn)
         {
             // Revoked too, so that reactivating the account does not resurrect an old session.
             await refreshTokens.RevokeFamilyAsync(stored.FamilyId, now, cancellationToken);

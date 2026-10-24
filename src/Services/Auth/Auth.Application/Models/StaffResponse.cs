@@ -9,7 +9,9 @@ public sealed record StaffResponse(
     string Email,
     string PhoneNumber,
     string Role,
-    Guid BranchId)
+    Guid BranchId,
+    bool IsActive,
+    DateTime RegisteredAtUtc)
 {
     public static StaffResponse From(User user) => new(
         user.Id,
@@ -18,5 +20,7 @@ public sealed record StaffResponse(
         user.Email.Value,
         user.PhoneNumber,
         user.Role.ToString(),
-        user.BranchId!.Value);
+        user.BranchId!.Value,
+        user.IsActive,
+        user.RegistrationDateUtc);
 }

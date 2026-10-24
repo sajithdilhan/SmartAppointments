@@ -52,10 +52,10 @@ public class UserRepository(ApplicationDbContext context) : IUserRepository
         }
     }
 
-    public async Task<int> SaveBranchMoveAsync(User user, DateTime nowUtc, CancellationToken cancellationToken)
+    public async Task<int> SaveAndRevokeSessionsAsync(User user, DateTime nowUtc, CancellationToken cancellationToken)
     {
         // Same transaction pattern as RefreshTokenRepository.TryRotateAsync: disposing uncommitted rolls
-        // back, so a failed revoke leaves the branch unchanged and the admin's retry is not a no-op. No
+        // back, so a failed revoke leaves the user unchanged and the admin's retry is not a no-op. No
         // retry execution strategy is configured; if one is added this must move inside it.
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
 

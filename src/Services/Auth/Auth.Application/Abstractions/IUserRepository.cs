@@ -40,8 +40,8 @@ public interface IUserRepository
     Task SaveChangesAsync(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Saves the user's changed branch and revokes every live refresh token of that user in one
-    /// transaction, so either both happen or neither. Returns the number of tokens revoked.
+    /// Saves the user's pending change and revokes every live refresh token of that user in one
+    /// transaction (both or neither). Returns the number of tokens revoked. Used by move, deactivate, delete.
     /// </summary>
-    Task<int> SaveBranchMoveAsync(User user, DateTime nowUtc, CancellationToken cancellationToken);
+    Task<int> SaveAndRevokeSessionsAsync(User user, DateTime nowUtc, CancellationToken cancellationToken);
 }

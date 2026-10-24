@@ -32,6 +32,14 @@ public sealed class User
     /// <summary>The branch a Staff user works at; null for every other role.</summary>
     public Guid? BranchId { get; private set; }
 
+    /// <summary>When an admin deleted this staff account; null while it exists. The row is kept (ADR-0008).</summary>
+    public DateTime? DeletedAtUtc { get; private set; }
+
+    public bool IsDeleted => DeletedAtUtc is not null;
+
+    /// <summary>Login and refresh are allowed only for an active account that is not deleted.</summary>
+    public bool CanSignIn => IsActive && !IsDeleted;
+
     public static User RegisterCustomer(
         string firstName,
         string lastName,
@@ -116,7 +124,28 @@ public sealed class User
 
     public void Activate()
     {
+        if (IsDeleted)
+        {
+            throw new InvalidOperationException("A deleted user cannot be activated.");
+        }
+
         IsActive = true;
+    }
+
+    public void MarkDeleted(DateTime nowUtc)
+    {
+        if (Role != UserRole.Staff)
+        {
+            throw new InvalidOperationException("Only a staff user can be deleted.");
+        }
+
+        if (IsDeleted)
+        {
+            throw new InvalidOperationException("The user is already deleted.");
+        }
+
+        DeletedAtUtc = nowUtc;
+        IsActive = false;
     }
 
     public void AssignBranch(Guid branchId)

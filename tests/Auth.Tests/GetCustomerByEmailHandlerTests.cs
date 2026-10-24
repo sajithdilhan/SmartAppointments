@@ -72,6 +72,21 @@ public class GetCustomerByEmailHandlerTests
         Assert.Equal(404, result.Error!.Status);
     }
 
+    [Fact]
+    public async Task A_Deleted_Account_Returns_The_Same_404()
+    {
+        var deleted = User.RegisterStaff("Sam", "Staff", Email.Create("sam@example.com"), "+15551234567", "hash", Guid.NewGuid());
+        deleted.MarkDeleted(new DateTime(2026, 10, 20, 9, 0, 0, DateTimeKind.Utc));
+        var repository = CreateRepository(deleted);
+        var query = new GetCustomerQuery("sam@example.com", "admin@example.com", nameof(UserRole.Admin));
+
+        var result = await CreateSubject(repository).Handle(query, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(404, result.Error!.Status);
+        Assert.Equal("Customer not found", result.Error.Details);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

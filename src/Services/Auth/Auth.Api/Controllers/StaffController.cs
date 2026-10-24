@@ -65,4 +65,57 @@ public class StaffController(ISender sender) : ControllerBase
 
         return Ok(result.Value);
     }
+
+    /// <summary>
+    /// Deactivates a staff member and ends all their refresh-token sessions. Repeating it is safe and
+    /// still revokes any live session. Access tokens already issued work until they expire.
+    /// </summary>
+    [HttpPost("{id:guid}/deactivate")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    public Task<IActionResult> Deactivate(Guid id, CancellationToken cancellationToken) =>
+        SetActive(id, false, cancellationToken);
+
+    /// <summary>
+    /// Reactivates a deactivated staff member whose branch still exists and is active. Their old
+    /// sessions stay ended, so they sign in again.
+    /// </summary>
+    [HttpPost("{id:guid}/activate")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
+    public Task<IActionResult> Activate(Guid id, CancellationToken cancellationToken) =>
+        SetActive(id, true, cancellationToken);
+
+    /// <summary>
+    /// Deletes a staff account (soft delete) and ends all their refresh-token sessions. The account
+    /// can no longer sign in or be read, and its email stays taken.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new DeleteStaffCommand(id), cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return this.ToActionResult(result.Error!);
+        }
+
+        return NoContent();
+    }
+
+    private async Task<IActionResult> SetActive(Guid id, bool isActive, CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new SetStaffActiveCommand(id, isActive), cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return this.ToActionResult(result.Error!);
+        }
+
+        return NoContent();
+    }
 }
