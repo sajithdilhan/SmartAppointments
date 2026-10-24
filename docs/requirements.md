@@ -156,7 +156,7 @@ Service-based organizations such as clinics, salons, vehicle service centers, go
 | FR-AUTH-003 | Role-Based Access | The system shall restrict APIs based on Customer, Staff, and Admin roles. |
 | FR-AUTH-004 | Refresh Token | The system shall let a signed-in user exchange a single-use refresh token for a new access token and refresh token, and shall revoke the whole token family when a rotated token is presented again. |
 | FR-AUTH-005 | Logout | The system shall let a user end a session by revoking the refresh token family the presented token belongs to. |
-| FR-AUTH-006 | Manage Staff | The system shall let an admin create staff accounts bound to a branch and move a staff member to another branch; a staff member's access token carries the branch they work at. |
+| FR-AUTH-006 | Manage Staff | The system shall let an admin create staff accounts bound to a branch, list and read them, move a staff member to another branch, deactivate and reactivate them, and delete them (a soft delete that keeps the record); a staff member's access token carries the branch they work at. |
 
 ### Availability Management
 
@@ -295,6 +295,11 @@ POST /api/auth/logout
 GET  /api/auth/me
 POST /api/auth/staff                  (admin)
 PUT  /api/auth/staff/{id}/branch      (admin)
+GET  /api/auth/staff?branchId=&isActive=&page=&pageSize=   (admin)
+GET  /api/auth/staff/{id}             (admin)
+POST /api/auth/staff/{id}/deactivate  (admin)
+POST /api/auth/staff/{id}/activate    (admin)
+DELETE /api/auth/staff/{id}           (admin, soft delete)
 ```
 
 ### Availability Service

@@ -83,7 +83,7 @@
 
 ## Chunk C — Delivery (orchestrator)
 
-- [ ] 14. Requests and docs
+- [x] 14. Requests and docs
   - `Auth.Api.http` and the gateway's `SmartAppointments.Gateway.http`: list (with filters and a bad-value example), get, activate, deactivate, delete
   - `docs/requirements.md`: widen FR-AUTH-006 and add the endpoints to the Auth endpoint draft (section 13)
   - `CLAUDE.md` Auth description; `docs/specs/README.md` row
