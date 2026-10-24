@@ -31,7 +31,7 @@ public class GetCustomerByEmailHandler(IUserRepository userRepository,
         }
 
         var user = await userRepository.GetByEmailAsync(requestedEmail, cancellationToken);
-        if (user is null)
+        if (user is null || user.IsDeleted)
         {
             logger.LogWarning("Customer with email {Email} not found", request.RequestedEmail);
             return Result<GetCustomerResponse?>.Failure(new Error(404, "Customer not found"));

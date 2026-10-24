@@ -59,6 +59,29 @@ public class LoginUserHandlerTests
         Assert.Equal(401, result.Error!.Status);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_Deleted_User_Is_Rejected_Even_When_IsActive_Was_Raced_Back_To_True(bool forceActive)
+    {
+        var user = CreateUser(UserRole.Staff);
+        user.MarkDeleted(Now);
+        if (forceActive)
+        {
+            DeletedUserHelper.ForceActive(user);
+        }
+
+        var refreshTokens = new Mock<IRefreshTokenRepository>();
+        var repository = CreateRepository(user);
+
+        var result = await CreateSubject(repository, refreshTokens).Handle(new LoginUserCommand(user.Email.Value, Password), CancellationToken.None);
+
+        Assert.Equal(401, result.Error!.Status);
+        Assert.Equal("Invalid user or password.", result.Error.Details);
+        refreshTokens.Verify(r => r.AddAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Never);
+        repository.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task Unknown_Email_Returns_401_Not_404()
     {

@@ -56,6 +56,8 @@ public class CreateStaffHandlerTests
         Assert.Equal("+15551234567", result.Value.PhoneNumber);
         Assert.Equal("Staff", result.Value.Role);
         Assert.Equal(BranchId, result.Value.BranchId);
+        Assert.True(result.Value.IsActive);
+        Assert.Equal(added.RegistrationDateUtc, result.Value.RegisteredAtUtc);
         _hasher.Verify(h => h.Hash("P@ssw0rd!23"), Times.Once);
         _users.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -113,6 +115,20 @@ public class CreateStaffHandlerTests
         Assert.Equal(400, result.Error!.Status);
         Assert.Equal("Email is already registered.", result.Error.Details);
         _availability.Verify(a => a.GetBranchAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _users.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task A_Deleted_Accounts_Email_Is_Still_Taken()
+    {
+        var deleted = User.RegisterStaff("Sam", "Staff", Email.Create("sam@example.com"), "+15551234567", "hash", BranchId);
+        deleted.MarkDeleted(new DateTime(2026, 10, 20, 9, 0, 0, DateTimeKind.Utc));
+        _users.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(deleted);
+
+        var result = await CreateSubject().Handle(ValidCommand, CancellationToken.None);
+
+        Assert.Equal(400, result.Error!.Status);
+        Assert.Equal("Email is already registered.", result.Error.Details);
         _users.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 

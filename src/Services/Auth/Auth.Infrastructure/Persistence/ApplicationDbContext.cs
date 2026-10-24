@@ -31,6 +31,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.PhoneNumber).IsRequired(); 
             entity.Property(e => e.RegistrationDateUtc).IsRequired();
             entity.Property(e => e.IsActive).IsRequired();
+            entity.Property(e => e.DeletedAtUtc);
 
             entity.HasIndex(e => e.Email).IsUnique();
         });

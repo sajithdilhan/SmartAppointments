@@ -27,7 +27,7 @@ public class AssignStaffBranchHandler(
         }
 
         var user = await userRepository.GetForUpdateByIdAsync(request.Id, cancellationToken);
-        if (user is null || user.Role != UserRole.Staff)
+        if (user is null || user.Role != UserRole.Staff || user.IsDeleted)
         {
             return Result<StaffResponse>.Failure(new Error(404, $"Staff member '{request.Id}' was not found."));
         }
@@ -48,7 +48,7 @@ public class AssignStaffBranchHandler(
 
         // One transaction: the branch change and the session revocation both happen or neither does,
         // so a failure leaves the old branch and an admin retry is not mistaken for the same-branch no-op.
-        var revoked = await userRepository.SaveBranchMoveAsync(
+        var revoked = await userRepository.SaveAndRevokeSessionsAsync(
             user, timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
 
         logger.LogInformation(

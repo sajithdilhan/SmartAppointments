@@ -249,6 +249,29 @@ public class RefreshTokenCommandHandlerTests
         _refreshTokens.Verify(r => r.TryRotateAsync(It.IsAny<Guid>(), It.IsAny<RefreshToken>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_Deleted_User_Is_401_And_The_Family_Is_Revoked_Even_When_IsActive_Was_Raced_Back_To_True(bool forceActive)
+    {
+        var user = CreateUser(UserRole.Staff);
+        user.MarkDeleted(Now);
+        if (forceActive)
+        {
+            DeletedUserHelper.ForceActive(user);
+        }
+
+        var stored = StartFamily(user, Now.AddDays(-1));
+        Arrange(stored, user);
+
+        var result = await CreateSubject().Handle(new RefreshTokenCommand(Presented), CancellationToken.None);
+
+        AssertUnauthorized(result);
+        _refreshTokens.Verify(r => r.RevokeFamilyAsync(stored.FamilyId, Now, It.IsAny<CancellationToken>()), Times.Once);
+        _refreshTokens.Verify(r => r.TryRotateAsync(It.IsAny<Guid>(), It.IsAny<RefreshToken>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        _tokenGenerator.Verify(t => t.GenerateAccessToken(It.IsAny<User>()), Times.Never);
+    }
+
     [Fact]
     public async Task A_User_Who_Is_Gone_Is_401_And_The_Family_Is_Revoked()
     {

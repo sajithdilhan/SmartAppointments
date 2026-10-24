@@ -48,6 +48,21 @@ public class LookupUsersHandlerTests
     }
 
     [Fact]
+    public async Task A_Deleted_User_Is_Still_Returned()
+    {
+        // Booking still shows the names on a deleted staff member's past appointments.
+        var sam = User.RegisterStaff("Sam", "Staff", Email.Create("sam@example.com"), "+15557654321", "hash", Guid.NewGuid());
+        sam.MarkDeleted(new DateTime(2026, 10, 20, 9, 0, 0, DateTimeKind.Utc));
+        _users.Setup(r => r.ListByIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([sam]);
+
+        var result = await CreateSubject().Handle(new LookupUsersQuery([sam.Id]), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Sam", Assert.Single(result.Value!).FirstName);
+    }
+
+    [Fact]
     public async Task Duplicate_Ids_Are_Looked_Up_Once()
     {
         var id = Guid.NewGuid();

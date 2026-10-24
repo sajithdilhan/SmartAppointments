@@ -23,7 +23,7 @@ public class AssignStaffBranchHandlerTests
     public AssignStaffBranchHandlerTests()
     {
         _users.Setup(r => r.GetForUpdateByIdAsync(_staff.Id, It.IsAny<CancellationToken>())).ReturnsAsync(_staff);
-        _users.Setup(r => r.SaveBranchMoveAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(2);
+        _users.Setup(r => r.SaveAndRevokeSessionsAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(2);
         _availability.Setup(a => a.GetBranchAsync(NewBranch, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<BranchInfo?>.Success(new BranchInfo(NewBranch, true, "UTC")));
     }
@@ -38,7 +38,9 @@ public class AssignStaffBranchHandlerTests
         Assert.Equal(NewBranch, result.Value!.BranchId);
         Assert.Equal(_staff.Id, result.Value.Id);
         Assert.Equal("Staff", result.Value.Role);
-        _users.Verify(r => r.SaveBranchMoveAsync(
+        Assert.True(result.Value.IsActive);
+        Assert.Equal(_staff.RegistrationDateUtc, result.Value.RegisteredAtUtc);
+        _users.Verify(r => r.SaveAndRevokeSessionsAsync(
             It.Is<User>(u => u.Id == _staff.Id && u.BranchId == NewBranch), Now.UtcDateTime, It.IsAny<CancellationToken>()), Times.Once);
         _users.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -51,7 +53,7 @@ public class AssignStaffBranchHandlerTests
         Assert.Equal(400, result.Error!.Status);
         Assert.Contains("Branch is required.", result.Error.Details);
         _users.Verify(r => r.GetForUpdateByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
-        _users.Verify(r => r.SaveBranchMoveAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        _users.Verify(r => r.SaveAndRevokeSessionsAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -83,6 +85,35 @@ public class AssignStaffBranchHandlerTests
     }
 
     [Fact]
+    public async Task A_Deleted_User_Is_404_With_No_Availability_Call_Or_Save()
+    {
+        _staff.MarkDeleted(Now.UtcDateTime);
+
+        var result = await CreateSubject().Handle(new AssignStaffBranchCommand(_staff.Id, NewBranch), CancellationToken.None);
+
+        Assert.Equal(404, result.Error!.Status);
+        Assert.Equal($"Staff member '{_staff.Id}' was not found.", result.Error.Details);
+        _availability.Verify(a => a.GetBranchAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _users.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _users.Verify(r => r.SaveAndRevokeSessionsAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task An_Inactive_User_Is_Moved_And_Stays_Inactive()
+    {
+        _staff.Deactivate();
+
+        var result = await CreateSubject().Handle(new AssignStaffBranchCommand(_staff.Id, NewBranch), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(NewBranch, result.Value!.BranchId);
+        Assert.False(result.Value.IsActive);
+        Assert.False(_staff.IsActive);
+        _users.Verify(r => r.SaveAndRevokeSessionsAsync(
+            It.Is<User>(u => u.Id == _staff.Id), Now.UtcDateTime, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task The_Same_Branch_Is_200_With_No_Availability_Call_Save_Or_Revoke()
     {
         var result = await CreateSubject().Handle(new AssignStaffBranchCommand(_staff.Id, OldBranch), CancellationToken.None);
@@ -91,7 +122,7 @@ public class AssignStaffBranchHandlerTests
         Assert.Equal(OldBranch, result.Value!.BranchId);
         _availability.Verify(a => a.GetBranchAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         _users.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-        _users.Verify(r => r.SaveBranchMoveAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        _users.Verify(r => r.SaveAndRevokeSessionsAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -105,7 +136,7 @@ public class AssignStaffBranchHandlerTests
         Assert.Equal(422, result.Error!.Status);
         Assert.Equal(OldBranch, _staff.BranchId);
         _users.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-        _users.Verify(r => r.SaveBranchMoveAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        _users.Verify(r => r.SaveAndRevokeSessionsAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -118,7 +149,7 @@ public class AssignStaffBranchHandlerTests
 
         Assert.Equal(422, result.Error!.Status);
         Assert.Equal(OldBranch, _staff.BranchId);
-        _users.Verify(r => r.SaveBranchMoveAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        _users.Verify(r => r.SaveAndRevokeSessionsAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -132,18 +163,18 @@ public class AssignStaffBranchHandlerTests
         Assert.Equal(503, result.Error!.Status);
         Assert.Equal(OldBranch, _staff.BranchId);
         _users.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-        _users.Verify(r => r.SaveBranchMoveAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        _users.Verify(r => r.SaveAndRevokeSessionsAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task A_Failed_Branch_Move_Propagates_And_Is_Not_Reported_As_Success()
     {
-        _users.Setup(r => r.SaveBranchMoveAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("db down"));
+        _users.Setup(r => r.SaveAndRevokeSessionsAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("db down"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             CreateSubject().Handle(new AssignStaffBranchCommand(_staff.Id, NewBranch), CancellationToken.None));
 
-        _users.Verify(r => r.SaveBranchMoveAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
+        _users.Verify(r => r.SaveAndRevokeSessionsAsync(It.IsAny<User>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private AssignStaffBranchHandler CreateSubject() => new(

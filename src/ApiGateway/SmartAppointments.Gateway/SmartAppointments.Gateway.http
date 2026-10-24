@@ -353,3 +353,56 @@ Content-Type: application/json
 }
 
 ###
+
+# ---- Staff accounts (admin only; Staff and Customer tokens get 403) ------------------------------
+@StaffId = <paste id>
+
+# 200 {items, page, pageSize, totalCount}: staff only, deleted accounts excluded, oldest first.
+GET {{Gateway_HostAddress}}/api/auth/staff?branchId={{BranchId}}&isActive=true&page=1&pageSize=20
+Authorization: Bearer {{AdminToken}}
+
+###
+
+# One 400 naming all three bad values.
+GET {{Gateway_HostAddress}}/api/auth/staff?isActive=x&branchId=xyz&page=0
+Authorization: Bearer {{AdminToken}}
+
+###
+
+# 201 with a Location (on the gateway's host) pointing at GET /api/auth/staff/{id}.
+POST {{Gateway_HostAddress}}/api/auth/staff
+Authorization: Bearer {{AdminToken}}
+Content-Type: application/json
+
+{
+  "firstName": "Kamal",
+  "lastName": "Perera",
+  "email": "kamal.staff@example.com",
+  "phoneNumber": "+94771234567",
+  "password": "Passw0rd!Passw0rd",
+  "branchId": "{{BranchId}}"
+}
+
+###
+
+# 200, or 404 for an unknown, non-staff or deleted id.
+GET {{Gateway_HostAddress}}/api/auth/staff/{{StaffId}}
+Authorization: Bearer {{AdminToken}}
+
+###
+
+# 204 and every refresh-token session revoked (a repeat is 204 too).
+POST {{Gateway_HostAddress}}/api/auth/staff/{{StaffId}}/deactivate
+Authorization: Bearer {{AdminToken}}
+
+###
+
+# 204; 422 when their branch is unknown or inactive, 503 when Availability is down.
+POST {{Gateway_HostAddress}}/api/auth/staff/{{StaffId}}/activate
+Authorization: Bearer {{AdminToken}}
+
+###
+
+# 204 (soft delete); afterwards every staff endpoint gives 404 for this id, and so does a second DELETE.
+DELETE {{Gateway_HostAddress}}/api/auth/staff/{{StaffId}}
+Authorization: Bearer {{AdminToken}}

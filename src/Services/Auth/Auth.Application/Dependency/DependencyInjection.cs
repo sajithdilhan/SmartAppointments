@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<CreateStaffCommand>, CreateStaffCommandValidator>();
         services.AddScoped<IValidator<AssignStaffBranchCommand>, AssignStaffBranchCommandValidator>();
         services.AddScoped<IValidator<LookupUsersQuery>, LookupUsersQueryValidator>();
+        services.AddScoped<IValidator<ListStaffQuery>, ListStaffQueryValidator>();
         return services;
     }
 }

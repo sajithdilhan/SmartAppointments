@@ -43,6 +43,20 @@ public class RegisterCustomerCommandHandlerTests
     }
 
     [Fact]
+    public async Task A_Deleted_Accounts_Email_Is_Still_Taken()
+    {
+        var deleted = User.RegisterStaff("Cam", "Customer", Email.Create("cam@example.com"), "+15551234567", "hash", Guid.NewGuid());
+        deleted.MarkDeleted(new DateTime(2026, 10, 20, 9, 0, 0, DateTimeKind.Utc));
+        var repository = CreateRepository(deleted);
+
+        var result = await CreateSubject(repository).Handle(ValidCommand, CancellationToken.None);
+
+        Assert.Equal(400, result.Error!.Status);
+        Assert.Equal("Email is already registered.", result.Error.Details);
+        repository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Duplicate_Check_Uses_The_Read_Only_Query()
     {
         // The existence check never mutates, so it must not take a tracked entity.

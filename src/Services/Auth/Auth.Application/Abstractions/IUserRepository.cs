@@ -40,8 +40,17 @@ public interface IUserRepository
     Task SaveChangesAsync(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Saves the user's changed branch and revokes every live refresh token of that user in one
-    /// transaction, so either both happen or neither. Returns the number of tokens revoked.
+    /// Saves the user's pending change and revokes every live refresh token of that user in one
+    /// transaction (both or neither). Returns the number of tokens revoked. Used by move, deactivate, delete.
     /// </summary>
-    Task<int> SaveBranchMoveAsync(User user, DateTime nowUtc, CancellationToken cancellationToken);
+    Task<int> SaveAndRevokeSessionsAsync(User user, DateTime nowUtc, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Non-deleted users with role Staff, optionally by branch and active flag (AND), ordered by
+    /// RegistrationDateUtc then Id, one page plus the total across all pages. No tracking.
+    /// </summary>
+    Task<StaffListPage> ListStaffAsync(Guid? branchId, bool? isActive, int page, int pageSize, CancellationToken cancellationToken);
 }
+
+/// <summary>One page of staff users and the total number across all pages.</summary>
+public sealed record StaffListPage(IReadOnlyList<User> Items, int TotalCount);

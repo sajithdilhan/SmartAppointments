@@ -83,6 +83,40 @@ Content-Type: application/json
 
 ###
 
+# A page of staff accounts (deleted ones are never listed), oldest registration first. All four query
+# values are optional: branchId, isActive (true or false), page (default 1), pageSize (default 20,
+# max 100). 400 lists every bad value at once.
+GET {{Auth.Api_HostAddress}}/api/auth/staff?branchId={{BranchId}}&isActive=true&page=1&pageSize=20
+Authorization: Bearer {{AdminToken}}
+
+###
+
+# 200 with the staff member, active or not. 404 for an unknown id, a non-staff user or a deleted account.
+GET {{Auth.Api_HostAddress}}/api/auth/staff/{{StaffId}}
+Authorization: Bearer {{AdminToken}}
+
+###
+
+# 204. Ends all their refresh-token sessions; repeating it is safe and still revokes any live session.
+# Access tokens already issued work until they expire. 404 for an unknown, non-staff or deleted user.
+POST {{Auth.Api_HostAddress}}/api/auth/staff/{{StaffId}}/deactivate
+Authorization: Bearer {{AdminToken}}
+
+###
+
+# 204. Their old sessions stay ended, so they sign in again. 422 when their branch no longer exists or
+# is inactive; 503 when Availability is unreachable; 404 for an unknown, non-staff or deleted user.
+POST {{Auth.Api_HostAddress}}/api/auth/staff/{{StaffId}}/activate
+Authorization: Bearer {{AdminToken}}
+
+###
+
+# 204. Soft delete: ends all sessions, hides the account, keeps its email taken. A second DELETE is 404.
+DELETE {{Auth.Api_HostAddress}}/api/auth/staff/{{StaffId}}
+Authorization: Bearer {{AdminToken}}
+
+###
+
 # ---- Internal (service-to-service) -----------------------------------------
 
 # Authenticated by X-API-Key only: a bearer token gets 401 here. Unknown ids are omitted from the
